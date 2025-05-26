@@ -1,1 +1,5 @@
 cd lmsv0.0.2
+
+
+//for new setup or not installed for the UI of log in page
+npm install lucide-react
