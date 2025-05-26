@@ -1,4 +1,8 @@
 cd lmsv0.0.2
+//for new cloned repo
+npm install @clerk/nextjs
+npm install react-hot-toast
+npm install @vercel/speed-insights
 
 
 //for new setup or not installed for the UI of log in page
