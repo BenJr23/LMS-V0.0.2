@@ -5,5 +5,5 @@ npm install react-hot-toast
 npm install @vercel/speed-insights
 
 
-//for new setup or not installed for the UI of log in page
+//for new setup or not installed for the UI of log in page for commit 5/26/2025 11:51pm
 npm install lucide-react
