@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Mail, Lock } from 'lucide-react';
+import Image from 'next/image';
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -38,10 +39,10 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100" style={{ backgroundImage: 'url(/assets/sis_bg.webp)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-xl shadow-md">
         <div className="text-center">
-          <div className="text-4xl mb-2">📖</div>
+          <Image src="/favicon.ico" alt="Favicon" width={120} height={120} className="mx-auto mb-2" />
           <h1 className="text-2xl font-bold text-red-800">Learning Management System</h1>
           <p className="text-gray-600 text-sm">Sign in to access your account</p>
         </div>
