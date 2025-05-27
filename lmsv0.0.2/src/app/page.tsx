@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Mail, Lock } from 'lucide-react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -38,6 +39,8 @@ export default function Home() {
       }`;
   };
 
+  const router = useRouter();
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100" style={{ backgroundImage: 'url(/assets/sis_bg.webp)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-xl shadow-md">
@@ -60,7 +63,12 @@ export default function Home() {
           ))}
         </div>
 
-        <form className="space-y-4">
+        <form className="space-y-4" onSubmit={(e) => {
+          e.preventDefault();
+          if (role === 'Student' && isEmailValid && isPasswordValid) {
+            router.push('/student-dashboard');
+          }
+        }}>
           {/* Email Field */}
           <div>
             <div className="relative">
