@@ -1,7 +1,9 @@
+"use client";
 import Link from 'next/link';
-import { ReactNode } from 'react';
+import { ReactNode, useState, useRef, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -38,7 +40,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 </Link>
               </li>
               <li>
-                <Link href="/calendar" className="block px-4 py-2 rounded-lg hover:bg-white/20 transition font-medium">
+                <Link href="/student-calendar" className="block px-4 py-2 rounded-lg hover:bg-white/20 transition font-medium">
                   Calendar
                 </Link>
               </li>
@@ -57,15 +59,68 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <h1 className="text-xl font-semibold text-[#800000] tracking-wide">WELCOME USER</h1>
           <div className="flex items-center space-x-4">
             <Bell className="text-[#800000]" />
-            <div className="bg-[#800000] text-white px-3 py-1 rounded-full text-sm font-medium">
-              Student User
-            </div>
+            <StudentUserDropdown />
           </div>
         </header>
 
         {/* Routed Page Content */}
         <main className="p-6 overflow-y-auto">{children}</main>
       </div>
+    </div>
+  );
+}
+
+function StudentUserDropdown() {
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && event.target instanceof Node && !dropdownRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [open]);
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        className={`bg-[#800000] text-white px-3 py-1 rounded-full text-sm font-medium focus:outline-none transition-transform duration-150 hover:scale-105 hover:shadow-lg active:scale-95`}
+        onClick={() => setOpen((prev) => !prev)}
+        type="button"
+      >
+        Student User
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg py-2 z-50 border border-gray-200 animate-fade-in">
+          <a
+            href="#"
+            className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition"
+            onClick={() => setOpen(false)}
+          >
+            PROFILE
+          </a>
+          <a
+            href="#"
+            className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition"
+            onClick={() => {
+              setOpen(false);
+              router.push('/');
+            }}
+          >
+            LOGOUT
+          </a>
+        </div>
+      )}
     </div>
   );
 }
