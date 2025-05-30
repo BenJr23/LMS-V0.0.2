@@ -15,10 +15,21 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+
+model Student {
+  lrn          String   @id                      // DepEd Learner Reference Number as primary key
+  firstName    String
+  lastName     String
+  middleName   String?
+  email        String   @unique
+  passwordHash String
+  gradeLevel   String
+  section      String
+  gender       String
+  dateOfBirth  DateTime
+  profileImage String?                          // optional URL or path to profile photo
+  status       String                           // e.g., Active, Dropped, Graduated
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
