@@ -67,6 +67,8 @@ export default function Home() {
           e.preventDefault();
           if (role === 'Student' && isEmailValid && isPasswordValid) {
             router.push('/student-dashboard');
+          } else if (role === 'Teacher' && isEmailValid && isPasswordValid) {
+            router.push('/faculty-dashboard');
           }
         }}>
           {/* Email Field */}
