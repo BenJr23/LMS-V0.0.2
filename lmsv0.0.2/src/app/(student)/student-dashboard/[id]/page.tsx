@@ -57,6 +57,21 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     { type: 'Assignment', title: 'Assignment #1: Programming Basics', due: 'Sep 16, 2023 7:59 AM', status: 'Not Submitted', points: '100 pts' }
   ];
 
+  // Group requirements by type
+  const groupedRequirements = requirements.reduce((acc, req) => {
+    const key = req.type.toUpperCase() + 'S'; // e.g., FORUMS, ASSIGNMENTS
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(req);
+    return acc;
+  }, {} as Record<string, typeof requirements>);
+
+  // Sample activities
+  const activities = [
+    { activity: 'Submitted Assignment #1', time: '2 hours ago' },
+    { activity: 'Posted in Forum: Why Computer Science?', time: '1 day ago' },
+    { activity: 'Viewed Quiz #1', time: '3 days ago' },
+  ];
+
   return (
     <div className="p-0 md:p-6">
       {/* Header Section */}
@@ -143,38 +158,41 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
       {/* Requirements Tab */}
       {activeTab === 'requirements' && (
         <div>
-          <h3 className="text-lg font-bold text-[#800000] mb-3 flex items-center gap-2"><ClipboardList className="w-5 h-5" /> Course Requirements</h3>
-          <div className="bg-white rounded-lg shadow overflow-x-auto border border-pink-100">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="text-left border-b bg-pink-50">
-                  <th className="p-3">Type</th>
-                  <th className="p-3">Title</th>
-                  <th className="p-3">Due Date</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3">Points</th>
-                  <th className="p-3">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {requirements.map((req, i) => (
-                  <tr key={i} className="border-b last:border-b-0">
-                    <td className="p-3 text-gray-800">{req.type}</td>
-                    <td className="p-3 whitespace-normal break-words max-w-xs text-gray-800">{req.title}</td>
-                    <td className="p-3 text-gray-800">{req.due}</td>
-                    <td className="p-3 text-gray-800">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold
-                        ${req.status === 'Not Started' ? 'bg-yellow-100 text-yellow-800' : req.status === 'Not Submitted' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>{req.status}</span>
-                    </td>
-                    <td className="p-3 text-gray-800">{req.points}</td>
-                    <td className="p-3">
-                      <button className="px-3 py-1 rounded bg-[#800000] text-white text-xs font-semibold shadow hover:bg-[#a52a2a] transition">View</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* Grouped Requirements Section */}
+          {Object.entries(groupedRequirements).map(([section, items]) => (
+            <div key={section} className="mb-6">
+              <h4 className="text-md font-bold text-[#800000] mb-2 uppercase tracking-wide">{section}</h4>
+              <div className="bg-white rounded-lg shadow overflow-x-auto border border-pink-100">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left border-b bg-pink-50">
+                      <th className="p-3">Title</th>
+                      <th className="p-3">Due Date</th>
+                      <th className="p-3">Status</th>
+                      <th className="p-3">Points</th>
+                      <th className="p-3">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((req, i) => (
+                      <tr key={i} className="border-b last:border-b-0">
+                        <td className="p-3 whitespace-normal break-words max-w-xs text-gray-800">{req.title}</td>
+                        <td className="p-3 text-gray-800">{req.due}</td>
+                        <td className="p-3 text-gray-800">
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold
+                            ${req.status === 'Not Started' ? 'bg-yellow-100 text-yellow-800' : req.status === 'Not Submitted' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>{req.status}</span>
+                        </td>
+                        <td className="p-3 text-gray-800">{req.points}</td>
+                        <td className="p-3">
+                          <button className="px-3 py-1 rounded bg-[#800000] text-white text-xs font-semibold shadow hover:bg-[#a52a2a] transition">View</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

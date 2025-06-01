@@ -64,7 +64,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </header>
 
         {/* Routed Page Content */}
-        <main className="p-6 pt-24">{children}</main>
+        <main className="flex-1 overflow-y-auto pt-28 px-6 pb-6">{children}</main>
       </div>
     </div>
   );
