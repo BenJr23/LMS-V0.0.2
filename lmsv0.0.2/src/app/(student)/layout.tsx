@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-visible">
       {/* Sidebar */}
       <aside className="w-64 bg-gradient-to-b from-[#800000] to-[#a52a2a] text-white flex flex-col justify-between shadow-lg">
         <div>
@@ -55,7 +55,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Main content area */}
       <div className="flex-1 flex flex-col bg-gray-100">
         {/* Topbar */}
-        <header className="flex justify-between items-center px-6 py-4 bg-white/80 shadow border-b border-gray-200 backdrop-blur-md">
+        <header className="absolute top-0 left-64 right-0 z-30 px-6 py-4 bg-white/80 shadow border-b border-gray-200 backdrop-blur-md flex justify-between items-center">
           <h1 className="text-xl font-semibold text-[#800000] tracking-wide">WELCOME USER</h1>
           <div className="flex items-center space-x-4">
             <Bell className="text-[#800000]" />
@@ -64,7 +64,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </header>
 
         {/* Routed Page Content */}
-        <main className="p-6 overflow-y-auto">{children}</main>
+        <main className="p-6 pt-24">{children}</main>
       </div>
     </div>
   );
