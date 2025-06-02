@@ -4,27 +4,24 @@ import { useState } from 'react';
 import { Mail, Lock } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useSignIn } from '@clerk/nextjs';
+import { fetchUserRole } from '@/lib/fetchUserRole';
 
 export default function Home() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'Student' | 'Teacher' | 'Admin'>('Student');
   const [touched, setTouched] = useState({ email: false, password: false });
   const [focused, setFocused] = useState({ email: false, password: false });
+  const [error, setError] = useState('');
 
-  const roles: ('Student' | 'Teacher' | 'Admin')[] = ['Student', 'Teacher', 'Admin'];
+  const { signIn, isLoaded, setActive } = useSignIn();
+  const router = useRouter();
 
   const emailRegex = /^[a-zA-Z0-9._%+-]{3,40}@[a-zA-Z0-9.-]+\.(com)$/;
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,14}$/;
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,20}$/;
 
   const isEmailValid = emailRegex.test(email);
   const isPasswordValid = passwordRegex.test(password);
-
-  const roleClasses = (r: string) =>
-    `px-4 py-2 rounded-md ${role === r
-      ? 'bg-red-700 text-white'
-      : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-    }`;
 
   const inputClass = (isValid: boolean, fieldTouched: boolean, value: string, isFocused: boolean) => {
     if (isFocused && value === '') {
@@ -39,8 +36,6 @@ export default function Home() {
       }`;
   };
 
-  const router = useRouter();
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100" style={{ backgroundImage: 'url(/assets/sis_bg.webp)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-xl shadow-md">
@@ -50,27 +45,46 @@ export default function Home() {
           <p className="text-gray-600 text-sm">Sign in to access your account</p>
         </div>
 
-        <div className="flex justify-center space-x-2">
-          {roles.map((r) => (
-            <button
-              key={r}
-              className={roleClasses(r)}
-              onClick={() => setRole(r)}
-              type="button"
-            >
-              {r}
-            </button>
-          ))}
-        </div>
+        <form
+          className="space-y-4"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setError('');
 
-        <form className="space-y-4" onSubmit={(e) => {
-          e.preventDefault();
-          if (role === 'Student' && isEmailValid && isPasswordValid) {
-            router.push('/student-dashboard');
-          } else if (role === 'Teacher' && isEmailValid && isPasswordValid) {
-            router.push('/faculty-dashboard');
-          }
-        }}>
+            if (!isLoaded) return;
+
+            if (!isEmailValid || !isPasswordValid) {
+              setError('Please enter valid email and password.');
+              return;
+            }
+
+            try {
+              const result = await signIn.create({
+                identifier: email,
+                password: password,
+              });
+
+              if (result.status === 'complete') {
+                await setActive({ session: result.createdSessionId });
+                const userRole = await fetchUserRole(email);
+
+                if (!userRole || userRole.toLowerCase() === 'student') {
+                  router.push('/student-dashboard');
+                } else if (userRole.toLowerCase() === 'Faculty') {
+                  router.push('/faculty-dashboard');
+                } else if (userRole.toLowerCase() === 'admin') {
+                  router.push('/admin-dashboard');
+                } else {
+                  setError('Invalid email or password.');
+                }
+              } else {
+                setError('Additional steps required to complete sign-in.');
+              }
+            } catch (err: any) {
+              setError('Invalid email or password.');
+            }
+          }}
+        >
           {/* Email Field */}
           <div>
             <div className="relative">
@@ -139,6 +153,8 @@ export default function Home() {
             </a>
           </div>
 
+          {error && <p className="text-red-600 text-sm">{error}</p>}
+
           <button
             type="submit"
             disabled={!isEmailValid || !isPasswordValid}
@@ -147,7 +163,7 @@ export default function Home() {
               : 'bg-red-700 text-white hover:bg-red-800'
               }`}
           >
-            Sign in as {role}
+            LOGIN
           </button>
         </form>
       </div>

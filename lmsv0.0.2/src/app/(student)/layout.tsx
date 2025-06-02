@@ -4,6 +4,7 @@ import { ReactNode, useState, useRef, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useClerk } from '@clerk/nextjs';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -74,6 +75,7 @@ function StudentUserDropdown() {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const { signOut } = useClerk();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -112,9 +114,9 @@ function StudentUserDropdown() {
           <a
             href="#"
             className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition"
-            onClick={() => {
+            onClick={async () => {
               setOpen(false);
-              router.push('/');
+              await signOut({ redirectUrl: '/' });
             }}
           >
             LOGOUT
