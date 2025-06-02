@@ -58,6 +58,24 @@ export default function Home() {
               return;
             }
 
+            // Fetch role before attempting sign in
+            let role: string = 'student'; // Default fallback
+
+            try {
+              const userRole = await fetchUserRole(email);
+              role = userRole?.toLowerCase() ?? 'student';
+            } catch (err) {
+              console.error('Role fetch error:', err);
+            }
+
+            localStorage.setItem('role', role);
+
+            // Block if role is not authorized
+            if (!['student', 'faculty', 'admin'].includes(role)) {
+              setError('Your account is not authorized to sign in.');
+              return;
+            }
+
             try {
               const result = await signIn.create({
                 identifier: email,
@@ -66,17 +84,14 @@ export default function Home() {
 
               if (result.status === 'complete') {
                 await setActive({ session: result.createdSessionId });
-                const userRole = await fetchUserRole(email);
 
-                if (!userRole || userRole.toLowerCase() === 'student') {
-                  router.push('/student-dashboard');
-                } else if (userRole.toLowerCase() === 'Faculty') {
-                  router.push('/faculty-dashboard');
-                } else if (userRole.toLowerCase() === 'admin') {
-                  router.push('/admin-dashboard');
-                } else {
-                  setError('Invalid email or password.');
-                }
+                const rolePathMap: Record<string, string> = {
+                  student: '/student-dashboard',
+                  faculty: '/faculty-dashboard',
+                  admin: '/admin-dashboard',
+                };
+
+                router.push(rolePathMap[role] || '/');
               } else {
                 setError('Additional steps required to complete sign-in.');
               }
@@ -84,6 +99,7 @@ export default function Home() {
               setError('Invalid email or password.');
             }
           }}
+
         >
           {/* Email Field */}
           <div>
