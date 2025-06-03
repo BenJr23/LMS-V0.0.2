@@ -1,4 +1,3 @@
-// app/api/getUserRole/route.ts
 import { NextResponse } from 'next/server';
 
 export async function GET(req: Request) {
@@ -19,16 +18,16 @@ export async function GET(req: Request) {
     });
 
     if (!res.ok) {
+      const html = await res.text(); // in case it's HTML
+      console.error('HRMS Error Response:', html);
       return NextResponse.json({ error: 'Failed to fetch role' }, { status: res.status });
     }
 
     const data = await res.json();
 
-    const role = Array.isArray(data.Role) ? data.Role[0] : null;
-
     return NextResponse.json({
       email: data.Email,
-      role,
+      role: Array.isArray(data.Role) ? data.Role[0] : null,
     });
 
   } catch (err) {
