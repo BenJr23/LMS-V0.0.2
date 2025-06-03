@@ -8,6 +8,7 @@ const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY 
 
 const isPublicRoute = createRouteMatcher([
     '/',
+    '/api/fetch-roles',
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

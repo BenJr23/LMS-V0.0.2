@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useSignIn, useClerk } from '@clerk/nextjs';
 import { isClerkAPIResponseError } from '@clerk/nextjs/errors';
+import { fetchUserRole } from '@/lib/fetchUserRole';
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -48,21 +49,27 @@ export default function Home() {
   
       if (result.status === 'complete') {
         const role = await fetchUserRole(email);
+        console.log('✅ Role fetched:', role);
   
         if (!role) {
-          await signOut(); // 🔥 kill the session before redirect
+          await signOut();
           setError('No role found for this user.');
           return;
         }
   
-        // ✅ role exists, proceed with redirect
-        if (role === 'admin') {
-          router.push('/admin-dashboard');
-        } else if (role === 'Faculty') {
-          router.push('/faculty-dashboard');
-        } else {
-          router.push('/student-dashboard');
-        }
+        const normalizedRole = role.toLowerCase();
+  
+        // ✅ Use `setTimeout()` as a workaround to allow router context to update
+        setTimeout(() => {
+          if (normalizedRole === 'admin') {
+            router.push('/admin-dashboard');
+          } else if (normalizedRole === 'faculty') {
+            router.push('/faculty-dashboard');
+          } else {
+            router.push('/student-dashboard');
+          }
+        }, 100); // 100ms delay helps ensure router context is fully updated
+  
       } else {
         setError('Verification step required.');
       }
@@ -74,6 +81,7 @@ export default function Home() {
       }
     }
   };
+  
   
 
   return (
