@@ -14,7 +14,7 @@ export default clerkMiddleware(async (auth, req) => {
     // Get the current authentication state
     const { userId } = await auth();
     const isAuthenticated = !!userId;
-    const url = new URL(req.url);
+    //const url = new URL(req.url);
 
     // Debug authentication state
     // console.log('=== Authentication Debug Info ===');

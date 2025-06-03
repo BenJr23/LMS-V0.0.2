@@ -38,7 +38,7 @@ export default function Home() {
 
   const fetchUserRole = async (email: string): Promise<string | null> => {
     try {
-      const response = await fetch(`/api/getUserRole?email=${encodeURIComponent(email)}`);
+      const response = await fetch(`/api/fetch-roles?email=${encodeURIComponent(email)}`);
       const data = await response.json();
       return data.role || null;
     } catch (error) {
