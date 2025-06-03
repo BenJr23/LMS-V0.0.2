@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ReactNode, useState, useRef, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useClerk } from '@clerk/nextjs';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -73,7 +73,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 function StudentUserDropdown() {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
+  const { signOut } = useClerk();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -94,7 +94,7 @@ function StudentUserDropdown() {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        className={`bg-[#800000] text-white px-3 py-1 rounded-full text-sm font-medium focus:outline-none transition-transform duration-150 hover:scale-105 hover:shadow-lg active:scale-95`}
+        className="bg-[#800000] text-white px-3 py-1 rounded-full text-sm font-medium focus:outline-none transition-transform duration-150 hover:scale-105 hover:shadow-lg active:scale-95"
         onClick={() => setOpen((prev) => !prev)}
         type="button"
       >
@@ -112,9 +112,9 @@ function StudentUserDropdown() {
           <a
             href="#"
             className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition"
-            onClick={() => {
+            onClick={async () => {
               setOpen(false);
-              router.push('/');
+              await signOut(); // Clerk sign out
             }}
           >
             LOGOUT
