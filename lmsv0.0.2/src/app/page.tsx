@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { Mail, Lock } from 'lucide-react';
 import Image from 'next/image';
-import { useSignIn } from '@clerk/nextjs';
+import { useSignIn, useClerk } from '@clerk/nextjs';
 import { isClerkAPIResponseError } from '@clerk/nextjs/errors';
+import { fetchUserRole } from '@/lib/fetchUserRole';
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -14,6 +15,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   const { signIn, isLoaded } = useSignIn();
+  const { signOut } = useClerk();
 
   const emailRegex = /^[a-zA-Z0-9._%+-]{3,40}@[a-zA-Z0-9.-]+\.(com)$/;
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,14}$/;
@@ -43,11 +45,21 @@ export default function Home() {
     try {
       const result = await signIn.create({ identifier: email, password });
 
-      if (result.status !== 'complete') {
+      if (result.status === 'complete') {
+        // Check user role
+        const role = await fetchUserRole(email);
+        
+        // If role is not one of the allowed roles, sign out and show error
+        if (!role || !['admin', 'faculty', 'student'].includes(role.toLowerCase())) {
+          await signOut();
+          setError('Invalid email and password');
+          return;
+        }
+
+        // If role is valid, let the middleware handle the redirection
+      } else {
         setError('Verification step required.');
       }
-
-      // No redirect here — let middleware handle role-based redirection after login
     } catch (err) {
       if (isClerkAPIResponseError(err)) {
         setError(err.errors[0]?.message || 'Sign-in failed');
