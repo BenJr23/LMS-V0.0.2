@@ -59,17 +59,14 @@ export default function Home() {
   
         const normalizedRole = role.toLowerCase();
   
-        // ✅ Use `setTimeout()` as a workaround to allow router context to update
-        setTimeout(() => {
-          if (normalizedRole === 'admin') {
-            router.push('/admin-dashboard');
-          } else if (normalizedRole === 'faculty') {
-            router.push('/faculty-dashboard');
-          } else {
-            router.push('/student-dashboard');
-          }
-        }, 100); // 100ms delay helps ensure router context is fully updated
-  
+        // Directly call router.push without setTimeout
+        if (normalizedRole === 'admin') {
+          router.push('/admin-dashboard');
+        } else if (normalizedRole === 'faculty') {
+          router.push('/faculty-dashboard');
+        } else {
+          router.push('/student-dashboard');
+        }
       } else {
         setError('Verification step required.');
       }
