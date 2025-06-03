@@ -37,18 +37,6 @@ export default function Home() {
       }`;
   };
 
-  const fetchUserRole = async (email: string): Promise<string | null> => {
-    try {
-      const response = await fetch(`/api/fetch-roles?email=${encodeURIComponent(email)}`);
-      const data = await response.json();
-      return data.role || null;
-    } catch (error) {
-      console.error('Error fetching role:', error);
-      return null;
-    }
-  };
-
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
