@@ -3,11 +3,11 @@ import Link from 'next/link';
 import { ReactNode, useState, useRef, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useClerk } from '@clerk/nextjs';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-visible">
       {/* Sidebar */}
       <aside className="w-64 bg-gradient-to-b from-[#800000] to-[#a52a2a] text-white flex flex-col justify-between shadow-lg">
         <div>
@@ -35,13 +35,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <nav className="px-4">
             <ul className="space-y-2">
               <li>
-                <Link href="/faculty-dashboard" className="block px-4 py-2 rounded-lg hover:bg-white/20 transition font-medium">
+                <Link href="/student-dashboard" className="block px-4 py-2 rounded-lg hover:bg-white/20 transition font-medium">
                   Dashboard
                 </Link>
               </li>
               <li>
                 <Link href="/student-calendar" className="block px-4 py-2 rounded-lg hover:bg-white/20 transition font-medium">
-                  AI failure prediction
+                  Calendar
                 </Link>
               </li>
             </ul>
@@ -55,7 +55,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Main content area */}
       <div className="flex-1 flex flex-col bg-gray-100">
         {/* Topbar */}
-        <header className="flex justify-between items-center px-6 py-4 bg-white/80 shadow border-b border-gray-200 backdrop-blur-md">
+        <header className="absolute top-0 left-64 right-0 z-30 px-6 py-4 bg-white/80 shadow border-b border-gray-200 backdrop-blur-md flex justify-between items-center">
           <h1 className="text-xl font-semibold text-[#800000] tracking-wide">WELCOME USER</h1>
           <div className="flex items-center space-x-4">
             <Bell className="text-[#800000]" />
@@ -64,7 +64,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </header>
 
         {/* Routed Page Content */}
-        <main className="p-6 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto pt-28 px-6 pb-6">{children}</main>
       </div>
     </div>
   );
@@ -73,7 +73,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 function StudentUserDropdown() {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
+  const { signOut } = useClerk();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -94,11 +94,11 @@ function StudentUserDropdown() {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        className={`bg-[#800000] text-white px-3 py-1 rounded-full text-sm font-medium focus:outline-none transition-transform duration-150 hover:scale-105 hover:shadow-lg active:scale-95`}
+        className="bg-[#800000] text-white px-3 py-1 rounded-full text-sm font-medium focus:outline-none transition-transform duration-150 hover:scale-105 hover:shadow-lg active:scale-95"
         onClick={() => setOpen((prev) => !prev)}
         type="button"
       >
-        Faculty User
+        Student User
       </button>
       {open && (
         <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg py-2 z-50 border border-gray-200 animate-fade-in">
@@ -112,9 +112,9 @@ function StudentUserDropdown() {
           <a
             href="#"
             className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition"
-            onClick={() => {
+            onClick={async () => {
               setOpen(false);
-              router.push('/');
+              await signOut(); // Clerk sign out
             }}
           >
             LOGOUT

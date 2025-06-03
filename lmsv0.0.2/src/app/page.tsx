@@ -3,10 +3,8 @@
 import { useState } from 'react';
 import { Mail, Lock } from 'lucide-react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { useSignIn, useClerk } from '@clerk/nextjs';
+import { useSignIn } from '@clerk/nextjs';
 import { isClerkAPIResponseError } from '@clerk/nextjs/errors';
-import { fetchUserRole } from '@/lib/fetchUserRole';
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -16,8 +14,6 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   const { signIn, isLoaded } = useSignIn();
-  const { signOut } = useClerk();
-  const router = useRouter();
 
   const emailRegex = /^[a-zA-Z0-9._%+-]{3,40}@[a-zA-Z0-9.-]+\.(com)$/;
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,14}$/;
@@ -31,45 +27,27 @@ export default function Home() {
     }
 
     return `w-full h-10 pl-10 pr-4 border rounded-md placeholder-gray-400 text-gray-800 focus:outline-none transition-all duration-200 ${fieldTouched && value !== ''
-        ? isValid
-          ? 'border-green-500 focus:ring-2 focus:ring-green-300'
-          : 'border-red-500 focus:ring-2 focus:ring-red-300'
-        : 'border-gray-300 focus:ring-2 focus:ring-gray-300'
-      }`;
+      ? isValid
+        ? 'border-green-500 focus:ring-2 focus:ring-green-300'
+        : 'border-red-500 focus:ring-2 focus:ring-red-300'
+      : 'border-gray-300 focus:ring-2 focus:ring-gray-300'
+    }`;
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-  
+
     if (!isLoaded || !isEmailValid || !isPasswordValid) return;
-  
+
     try {
       const result = await signIn.create({ identifier: email, password });
-  
-      if (result.status === 'complete') {
-        const role = await fetchUserRole(email);
-        console.log('✅ Role fetched:', role);
-  
-        if (!role) {
-          await signOut();
-          setError('No role found for this user.');
-          return;
-        }
-  
-        const normalizedRole = role.toLowerCase();
-  
-        // Directly call router.push without setTimeout
-        if (normalizedRole === 'admin') {
-          router.push('/admin-dashboard');
-        } else if (normalizedRole === 'faculty') {
-          router.push('/faculty-dashboard');
-        } else {
-          router.push('/student-dashboard');
-        }
-      } else {
+
+      if (result.status !== 'complete') {
         setError('Verification step required.');
       }
+
+      // No redirect here — let middleware handle role-based redirection after login
     } catch (err) {
       if (isClerkAPIResponseError(err)) {
         setError(err.errors[0]?.message || 'Sign-in failed');
@@ -78,8 +56,6 @@ export default function Home() {
       }
     }
   };
-  
-  
 
   return (
     <div
@@ -166,8 +142,8 @@ export default function Home() {
             type="submit"
             disabled={!isEmailValid || !isPasswordValid}
             className={`w-full py-2 rounded-md transition ${!isEmailValid || !isPasswordValid
-                ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                : 'bg-red-700 text-white hover:bg-red-800'
+              ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+              : 'bg-red-700 text-white hover:bg-red-800'
               }`}
           >
             Sign in
