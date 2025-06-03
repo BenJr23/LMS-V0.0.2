@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Mail, Lock } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useSignIn } from '@clerk/nextjs';
+import { useSignIn, useClerk } from '@clerk/nextjs';
 import { isClerkAPIResponseError } from '@clerk/nextjs/errors';
 
 export default function Home() {
@@ -15,6 +15,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   const { signIn, isLoaded } = useSignIn();
+  const { signOut } = useClerk();
   const router = useRouter();
 
   const emailRegex = /^[a-zA-Z0-9._%+-]{3,40}@[a-zA-Z0-9.-]+\.(com)$/;
@@ -51,20 +52,22 @@ export default function Home() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
+  
     if (!isLoaded || !isEmailValid || !isPasswordValid) return;
-
+  
     try {
       const result = await signIn.create({ identifier: email, password });
-
+  
       if (result.status === 'complete') {
         const role = await fetchUserRole(email);
-
+  
         if (!role) {
+          await signOut(); // 🔥 kill the session before redirect
           setError('No role found for this user.');
           return;
         }
-
+  
+        // ✅ role exists, proceed with redirect
         if (role === 'admin') {
           router.push('/admin-dashboard');
         } else if (role === 'Faculty') {
@@ -73,17 +76,17 @@ export default function Home() {
           router.push('/student-dashboard');
         }
       } else {
-        setError('Verification step required. Contact administrator.');
+        setError('Verification step required.');
       }
     } catch (err) {
-      console.error(err);
       if (isClerkAPIResponseError(err)) {
         setError(err.errors[0]?.message || 'Sign-in failed');
       } else {
-        setError('An unexpected error occurred.');
+        setError('Unexpected error during login.');
       }
     }
   };
+  
 
   return (
     <div
