@@ -8,23 +8,14 @@ import { useRouter } from 'next/navigation';
 export default function Home() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'Student' | 'Teacher' | 'Admin'>('Student');
   const [touched, setTouched] = useState({ email: false, password: false });
   const [focused, setFocused] = useState({ email: false, password: false });
 
-  const roles: ('Student' | 'Teacher' | 'Admin')[] = ['Student', 'Teacher', 'Admin'];
-
   const emailRegex = /^[a-zA-Z0-9._%+-]{3,40}@[a-zA-Z0-9.-]+\.(com)$/;
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,14}$/;
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,14}$/;
 
   const isEmailValid = emailRegex.test(email);
   const isPasswordValid = passwordRegex.test(password);
-
-  const roleClasses = (r: string) =>
-    `px-4 py-2 rounded-md ${role === r
-      ? 'bg-red-700 text-white'
-      : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-    }`;
 
   const inputClass = (isValid: boolean, fieldTouched: boolean, value: string, isFocused: boolean) => {
     if (isFocused && value === '') {
@@ -50,25 +41,11 @@ export default function Home() {
           <p className="text-gray-600 text-sm">Sign in to access your account</p>
         </div>
 
-        <div className="flex justify-center space-x-2">
-          {roles.map((r) => (
-            <button
-              key={r}
-              className={roleClasses(r)}
-              onClick={() => setRole(r)}
-              type="button"
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-
         <form className="space-y-4" onSubmit={(e) => {
           e.preventDefault();
-          if (role === 'Student' && isEmailValid && isPasswordValid) {
-            router.push('/student-dashboard');
-          } else if (role === 'Teacher' && isEmailValid && isPasswordValid) {
-            router.push('/faculty-dashboard');
+          if (isEmailValid && isPasswordValid) {
+            // TODO: Replace with actual login logic or redirect
+            router.push('/dashboard');
           }
         }}>
           {/* Email Field */}
@@ -123,7 +100,7 @@ export default function Home() {
             <div className="min-h-[1rem]">
               {touched.password && password !== '' && !isPasswordValid && (
                 <p className="text-[10px] text-red-600 mt-1">
-                  Password must be 8–14 chars with 1 uppercase, 1 lowercase, 1 digit, 1 special character.
+                  Password must be 8–14 chars with 1 uppercase, 1 lowercase, 1 special character.
                 </p>
               )}
             </div>
@@ -147,7 +124,7 @@ export default function Home() {
               : 'bg-red-700 text-white hover:bg-red-800'
               }`}
           >
-            Sign in as {role}
+            Sign in
           </button>
         </form>
       </div>
