@@ -15,3 +15,10 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+model Subject {
+  id          String   @id @default(cuid())
+  name        String
+  code        String   @unique
+  createdById String   // Clerk userId (e.g., "user_abc123"), just stored as string
+  createdAt   DateTime @default(now())
+}
