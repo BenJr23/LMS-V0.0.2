@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Eye, Edit, Trash2, Plus } from 'lucide-react';
-import { getSubjects, createSubject } from '@/app/_actions/subject';
+import { getSubjects, createSubject, deleteSubject } from '@/app/_actions/subject';
 
 type Subject = {
   id: string;
@@ -18,6 +18,8 @@ export default function AdminSubjectPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newCode, setNewCode] = useState('');
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [subjectToDelete, setSubjectToDelete] = useState<Subject | null>(null);
 
   useEffect(() => {
     const fetchSubjects = async () => {
@@ -49,12 +51,32 @@ export default function AdminSubjectPage() {
     }
   };
 
+  const openDeleteModal = (subject: Subject) => {
+    setSubjectToDelete(subject);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!subjectToDelete) return;
+
+    try {
+      await deleteSubject(subjectToDelete.id);
+      setSubjects(prev => prev.filter(sub => sub.id !== subjectToDelete.id));
+      setIsDeleteModalOpen(false);
+      setSubjectToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete subject:', error);
+      alert('Failed to delete subject');
+    }
+  };
+
   const filteredSubjects = subjects.filter((subject) =>
     subject.name.toLowerCase().includes(search.toLowerCase()) ||
     subject.code.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
+
     <div className="min-h-screen bg-gray-50 p-6">
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
@@ -109,6 +131,34 @@ export default function AdminSubjectPage() {
         </div>
       )}
 
+
+      {isDeleteModalOpen && subjectToDelete && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6 space-y-4">
+            <h3 className="text-xl font-semibold text-[#800000]">Delete Subject</h3>
+            <p className="text-gray-700">
+              Are you sure you want to delete the subject{' '}
+              <span className="font-semibold text-[#800000]">{subjectToDelete.name}</span> (
+              <span className="text-gray-600">{subjectToDelete.code}</span>)?
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300 transition-colors duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 transition-colors duration-200"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
           <h2 className="text-2xl font-bold text-[#800000] drop-shadow-sm">Subjects</h2>
@@ -157,7 +207,10 @@ export default function AdminSubjectPage() {
                         <button className="p-2 text-gray-600 hover:text-[#800000] hover:bg-red-50 rounded-lg transition">
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
+                        <button
+                          onClick={() => openDeleteModal(subject)}
+                          className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
