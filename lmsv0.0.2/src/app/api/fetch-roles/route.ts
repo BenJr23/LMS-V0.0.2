@@ -8,9 +8,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing email parameter' }, { status: 400 });
   }
 
-  const email = decodeURIComponent(encodedEmail); // ✅ this will convert %40 to @
-
-  console.log('Email received:', email); // will now show admin@admin.com
+  const email = decodeURIComponent(encodedEmail);
 
   try {
     const response = await fetch(`https://hrms-v2-azure.vercel.app/api/getUserRole?email=${encodeURIComponent(email)}`, {
@@ -26,7 +24,7 @@ export async function GET(req: NextRequest) {
     }
 
     const data = await response.json();
-    return NextResponse.json({ role: data.Role?.[0] || null });
+    return NextResponse.json({ role: data.Role?.[0]?.toLowerCase() || null }, { status: 200 });
 
   } catch (error) {
     console.error('Error fetching role from HRMS:', error);

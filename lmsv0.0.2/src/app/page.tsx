@@ -1,10 +1,12 @@
 'use client';
 
+import { useRouter } from 'next/navigation'; // at the top
 import { useState } from 'react';
 import { Mail, Lock } from 'lucide-react';
 import Image from 'next/image';
 import { useSignIn } from '@clerk/nextjs';
 import { isClerkAPIResponseError } from '@clerk/nextjs/errors';
+
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -12,8 +14,9 @@ export default function Home() {
   const [touched, setTouched] = useState({ email: false, password: false });
   const [focused, setFocused] = useState({ email: false, password: false });
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const { setActive, signIn, isLoaded } = useSignIn();
 
-  const { signIn, isLoaded } = useSignIn();
 
   const emailRegex = /^[a-zA-Z0-9._%+-]{3,40}@[a-zA-Z0-9.-]+\.(com)$/;
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,14}$/;
@@ -37,17 +40,41 @@ export default function Home() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
+  
     if (!isLoaded || !isEmailValid || !isPasswordValid) return;
-
+  
     try {
       const result = await signIn.create({ identifier: email, password });
-
+  
       if (result.status !== 'complete') {
         setError('Verification step required.');
+        return;
       }
-
-      // No redirect here — let middleware handle role-based redirection after login
+  
+      // ✅ Activate the session
+      await setActive({ session: result.createdSessionId });
+  
+      // ✅ Fetch the user's role from the API
+      const res = await fetch(`/api/fetch-roles?email=${encodeURIComponent(email)}`);
+      const data = await res.json();
+      const role = data?.role?.toLowerCase();
+  
+      if (!role) {
+        router.push('/unauthorized');
+        return;
+      }
+  
+      // ✅ Redirect based on role
+      if (role === 'admin') {
+        router.push('/admin-dashboard');
+      } else if (role === 'faculty') {
+        router.push('/faculty-dashboard');
+      } else if (role === 'student') {
+        router.push('/student-dashboard');
+      } else {
+        router.push('/unauthorized');
+      }
+  
     } catch (err) {
       if (isClerkAPIResponseError(err)) {
         setError(err.errors[0]?.message || 'Sign-in failed');
@@ -56,6 +83,8 @@ export default function Home() {
       }
     }
   };
+  
+  
 
   return (
     <div
