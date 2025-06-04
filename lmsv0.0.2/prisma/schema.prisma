@@ -16,9 +16,26 @@ datasource db {
 }
 
 model Subject {
-  id          String   @id @default(cuid())
+  id          String             @id @default(cuid())
   name        String
-  code        String   @unique
-  createdById String   // Clerk userId (e.g., "user_abc123"), just stored as string
-  createdAt   DateTime @default(now())
+  code        String             @unique
+  createdById String             // Clerk userId
+  createdAt   DateTime           @default(now())
+
+  instances   SubjectInstance[]  // One-to-many relationship
+}
+
+model SubjectInstance {
+  id           String   @id @default(cuid())
+  teacherName  String
+  grade        String
+  section      String
+  enrollment   Int      // 0 = Inactive, 1 = Active
+  icon         String   // Image path
+  subjectId    String
+  createdById  String
+  createdAt    DateTime @default(now())
+
+  // Relations
+  subject      Subject  @relation(fields: [subjectId], references: [id])
 }
