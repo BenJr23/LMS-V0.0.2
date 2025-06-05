@@ -4,6 +4,7 @@ import { ReactNode, useState, useRef, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import Image from 'next/image';
 import { useClerk } from '@clerk/nextjs';
+import { Toaster } from 'react-hot-toast';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -66,6 +67,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         {/* Routed Page Content */}
         <main className="flex-1 overflow-y-auto pt-28 px-6 pb-6">{children}</main>
       </div>
+      <Toaster position="top-right" />
     </div>
   );
 }

@@ -37,3 +37,22 @@ export async function createSubjectInstance(formData: {
 
   return instance;
 }
+
+
+export async function getSubjectInstances() {
+    try {
+      const instances = await prisma.subjectInstance.findMany({
+        include: {
+          subject: true, // Includes related Subject data
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+  
+      return instances;
+    } catch (error) {
+      console.error('Failed to fetch subject instances:', error);
+      throw new Error('Could not retrieve subject instances');
+    }
+  }

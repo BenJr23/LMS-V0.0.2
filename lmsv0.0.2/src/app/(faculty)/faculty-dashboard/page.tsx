@@ -4,11 +4,25 @@ import Image from 'next/image';
 import { Users, Plus, Upload } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { getSubjects } from '@/app/_actions/subject';
-import { createSubjectInstance } from '@/app/_actions/subjectInstance';
+import { createSubjectInstance, getSubjectInstances } from '@/app/_actions/subjectInstance';
+import toast from 'react-hot-toast';
 
 export default function TeachingSectionsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [subjects, setSubjects] = useState<Array<{ id: string; name: string; code: string }>>([]);
+  const [subjectInstances, setSubjectInstances] = useState<Array<{
+    id: string;
+    teacherName: string;
+    grade: string;
+    section: string;
+    enrollment: number;
+    icon: string;
+    subject: {
+      id: string;
+      name: string;
+      code: string;
+    };
+  }>>([]);
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form, setForm] = useState({
@@ -16,66 +30,35 @@ export default function TeachingSectionsPage() {
     subjectId: '',
     grade: '',
     section: '',
-    enrollment: 1, // Default to active
+    enrollment: 1,
     icon: '',
   });
   const [subjectSearch, setSubjectSearch] = useState('');
   const [showSubjectDropdown, setShowSubjectDropdown] = useState(false);
   const [showSectionDropdown, setShowSectionDropdown] = useState(false);
 
-  const sectionOptions = ['A', 'B', 'C']; // Placeholder, no table yet
+  const sectionOptions = ['A', 'B', 'C'];
 
   useEffect(() => {
-    const fetchSubjects = async () => {
+    const fetchData = async () => {
       try {
-        const subjectsData = await getSubjects();
+        const [subjectsData, instancesData] = await Promise.all([
+          getSubjects(),
+          getSubjectInstances()
+        ]);
         setSubjects(subjectsData);
+        setSubjectInstances(instancesData);
       } catch (error) {
-        console.error('Failed to fetch subjects:', error);
+        console.error('Failed to fetch data:', error);
+        toast.error('Failed to load data');
       }
     };
-    fetchSubjects();
+    fetchData();
   }, []);
 
-  const sections = [
-    {
-      code: 'CS101',
-      title: 'Introduction to Computer Science',
-      section: 'A',
-      students: 32,
-      image: '/course1.jpg',
-    },
-    {
-      code: 'CS101',
-      title: 'Introduction to Computer Science',
-      section: 'B',
-      students: 28,
-      image: '/course1.jpg',
-    },
-    {
-      code: 'CS301',
-      title: 'Advanced Programming',
-      section: 'A',
-      students: 24,
-      image: '/course3.jpg',
-    },
-    {
-      code: 'CS201',
-      title: 'Data Structures',
-      section: 'A',
-      students: 30,
-      image: '/course4.jpg',
-    },
-  ];
-
-  const filteredSections = sections.filter((section) =>
-    section.title.toLowerCase().includes(search.toLowerCase()) ||
-    section.code.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const filteredSubjects = subjects.filter(subject =>
-    subject.name.toLowerCase().includes(subjectSearch.toLowerCase()) ||
-    subject.code.toLowerCase().includes(subjectSearch.toLowerCase())
+  const filteredInstances = subjectInstances.filter((instance) =>
+    instance.subject.name.toLowerCase().includes(search.toLowerCase()) ||
+    instance.subject.code.toLowerCase().includes(search.toLowerCase())
   );
 
   const handleGradeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -171,7 +154,7 @@ export default function TeachingSectionsPage() {
                   />
                   {showSubjectDropdown && (
                     <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
-                      {filteredSubjects.map((subject) => (
+                      {subjects.map((subject) => (
                         <div
                           key={subject.id}
                           className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-800"
@@ -281,23 +264,29 @@ export default function TeachingSectionsPage() {
 
             <div className="flex justify-end gap-2 pt-4">
               <button
+                onClick={handleCloseModal}
+                className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300 transition-colors duration-200"
+              >
+                Cancel
+              </button>
+              <button
                 onClick={async () => {
                   try {
                     if (!form.subjectId) {
-                      alert('Please select a subject');
+                      toast.error('Please select a subject');
                       return;
                     }
                     if (!form.teacherName || !form.grade || !form.section) {
-                      alert('Please fill in all required fields');
+                      toast.error('Please fill in all required fields');
                       return;
                     }
 
                     await createSubjectInstance(form);
-                    alert('Subject instance created!');
-                    handleCloseModal(); // ✅ only once
+                    toast.success('Subject instance created successfully!');
+                    handleCloseModal();
                   } catch (error) {
                     console.error(error);
-                    alert('Failed to create section');
+                    toast.error('Failed to create subject instance');
                   }
                 }}
                 className="px-4 py-2 rounded bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200"
@@ -332,15 +321,15 @@ export default function TeachingSectionsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredSections.map((section, index) => (
+        {filteredInstances.map((instance) => (
           <div
-            key={index}
+            key={instance.id}
             className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 hover:scale-[1.02] transform"
           >
             <div className="relative h-40 w-full">
               <Image
-                src={section.image}
-                alt={section.title}
+                src={instance.icon || '/course1.jpg'}
+                alt={instance.subject.name}
                 fill
                 className="object-cover"
               />
@@ -348,20 +337,26 @@ export default function TeachingSectionsPage() {
 
             <div className="p-4 space-y-2">
               <div className="flex justify-between items-center text-sm mb-1">
-                <span className="bg-pink-100 text-[#800000] px-2 py-0.5 rounded font-medium">{section.code}</span>
-                <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded font-medium">Section {section.section}</span>
+                <span className="bg-pink-100 text-[#800000] px-2 py-0.5 rounded font-medium">
+                  {instance.subject.code}
+                </span>
+                <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded font-medium">
+                  Section {instance.section}
+                </span>
               </div>
 
-              <h3 className="text-lg font-semibold text-gray-900">{section.title}</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{instance.subject.name}</h3>
+              <p className="text-sm text-gray-600">Grade {instance.grade}</p>
+              <p className="text-sm text-gray-600">Teacher: {instance.teacherName}</p>
 
               <div className="flex items-center text-sm text-gray-700 gap-1">
                 <Users className="w-4 h-4 text-[#800000]" />
-                {section.students} Students
+                {instance.enrollment === 1 ? 'Active' : 'Inactive'}
               </div>
             </div>
           </div>
         ))}
-        {filteredSections.length === 0 && (
+        {filteredInstances.length === 0 && (
           <div className="col-span-full text-center py-8 text-gray-500">
             No sections found.
           </div>
