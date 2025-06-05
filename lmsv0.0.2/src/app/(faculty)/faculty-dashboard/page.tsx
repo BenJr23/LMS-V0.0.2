@@ -5,9 +5,12 @@ import { Users, Plus, Upload } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { getSubjects } from '@/app/_actions/subject';
 import { createSubjectInstance, getSubjectInstances } from '@/app/_actions/subjectInstance';
+import { uploadIcon, getImageUrl } from '@/app/_actions/uploadIcon';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 export default function TeachingSectionsPage() {
+  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [subjects, setSubjects] = useState<Array<{ id: string; name: string; code: string }>>([]);
   const [subjectInstances, setSubjectInstances] = useState<Array<{
@@ -17,6 +20,7 @@ export default function TeachingSectionsPage() {
     section: string;
     enrollment: number;
     icon: string;
+    enrolmentCode: number;
     subject: {
       id: string;
       name: string;
@@ -32,12 +36,26 @@ export default function TeachingSectionsPage() {
     section: '',
     enrollment: 1,
     icon: '',
+    enrolmentCode: Math.floor(1000 + Math.random() * 9000),
   });
   const [subjectSearch, setSubjectSearch] = useState('');
   const [showSubjectDropdown, setShowSubjectDropdown] = useState(false);
   const [showSectionDropdown, setShowSectionDropdown] = useState(false);
+  const [showGradeDropdown, setShowGradeDropdown] = useState(false);
+  const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
 
   const sectionOptions = ['A', 'B', 'C'];
+  const gradeOptions = [7, 8, 9, 10];
+
+  const fetchSubjectInstances = async () => {
+    try {
+      const instancesData = await getSubjectInstances();
+      setSubjectInstances(instancesData || []);
+    } catch (error) {
+      console.error('Failed to fetch subject instances:', error);
+      toast.error('Failed to load subject instances');
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -46,8 +64,14 @@ export default function TeachingSectionsPage() {
           getSubjects(),
           getSubjectInstances()
         ]);
+        
+        if (!subjectsData) {
+          toast.error('Failed to load subjects');
+          return;
+        }
+        
         setSubjects(subjectsData);
-        setSubjectInstances(instancesData);
+        setSubjectInstances(instancesData || []);
       } catch (error) {
         console.error('Failed to fetch data:', error);
         toast.error('Failed to load data');
@@ -56,17 +80,13 @@ export default function TeachingSectionsPage() {
     fetchData();
   }, []);
 
-  const filteredInstances = subjectInstances.filter((instance) =>
-    instance.subject.name.toLowerCase().includes(search.toLowerCase()) ||
-    instance.subject.code.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const handleGradeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (value === '' || ['7', '8', '9', '10'].includes(value)) {
-      setForm(prev => ({ ...prev, grade: value }));
-    }
-  };
+  const filteredInstances = subjectInstances.filter((instance) => {
+    if (!instance || !instance.subject) return false;
+    return (
+      instance.subject.name?.toLowerCase().includes(search.toLowerCase()) ||
+      instance.subject.code?.toLowerCase().includes(search.toLowerCase())
+    );
+  });
 
   const handleIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -74,31 +94,30 @@ export default function TeachingSectionsPage() {
 
     // Check if file is an image
     if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file');
+      toast.error('Please upload an image file');
       return;
     }
 
     try {
-      // Create a FormData object
-      const formData = new FormData();
-      formData.append('file', file);
+      const result = await uploadIcon(file);
 
-      // Send the file to your API endpoint
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Upload failed');
+      if (!result.success || !result.path) {
+        throw new Error(result.error || 'Upload failed');
       }
 
-      const data = await response.json();
-      // Update the form with the new icon path
-      setForm(prev => ({ ...prev, icon: data.path }));
+      // Get the signed URL for the uploaded image
+      const url = await getImageUrl(result.path);
+      if (!url) {
+        throw new Error('Failed to get image URL');
+      }
+
+      // Update the form with the new icon path and cache the URL
+      setForm(prev => ({ ...prev, icon: result.path }));
+      setImageUrls(prev => ({ ...prev, [result.path]: url }));
+      toast.success('Icon uploaded successfully');
     } catch (error) {
       console.error('Upload failed:', error);
-      alert('Failed to upload image');
+      toast.error('Failed to upload image');
     }
   };
 
@@ -110,6 +129,7 @@ export default function TeachingSectionsPage() {
       section: '',
       enrollment: 1,
       icon: '',
+      enrolmentCode: Math.floor(1000 + Math.random() * 9000),
     });
     setSubjectSearch('');
   };
@@ -118,6 +138,26 @@ export default function TeachingSectionsPage() {
     setIsModalOpen(false);
     resetForm();
   };
+
+  // Update image URLs when instances change
+  useEffect(() => {
+    const updateImageUrls = async () => {
+      const newUrls: Record<string, string> = {};
+      for (const instance of subjectInstances) {
+        if (instance.icon && !imageUrls[instance.icon]) {
+          const url = await getImageUrl(instance.icon);
+          if (url) {
+            newUrls[instance.icon] = url;
+          }
+        }
+      }
+      if (Object.keys(newUrls).length > 0) {
+        setImageUrls(prev => ({ ...prev, ...newUrls }));
+      }
+    };
+
+    updateImageUrls();
+  }, [subjectInstances, imageUrls]);
 
   return (
     <div className="p-6">
@@ -174,13 +214,32 @@ export default function TeachingSectionsPage() {
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Grade</label>
-                <input
-                  type="text"
-                  placeholder="Enter grade (7-10)"
-                  value={form.grade}
-                  onChange={handleGradeChange}
-                  className="w-full border rounded px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] text-gray-800 placeholder-gray-400 bg-white"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Select grade"
+                    value={form.grade}
+                    readOnly
+                    onFocus={() => setShowGradeDropdown(true)}
+                    className="w-full border rounded px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] text-gray-800 placeholder-gray-400 bg-white cursor-pointer"
+                  />
+                  {showGradeDropdown && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg">
+                      {gradeOptions.map((grade) => (
+                        <div
+                          key={grade}
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-800"
+                          onClick={() => {
+                            setForm(prev => ({ ...prev, grade: grade.toString() }));
+                            setShowGradeDropdown(false);
+                          }}
+                        >
+                          {grade}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -226,6 +285,30 @@ export default function TeachingSectionsPage() {
               </div>
 
               <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Enrollment Code</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={form.enrolmentCode}
+                    disabled
+                    className="w-full border rounded px-4 py-2 text-sm bg-gray-50 text-gray-600 cursor-not-allowed"
+                    placeholder="Auto-generated code"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newCode = Math.floor(1000 + Math.random() * 9000);
+                      setForm(prev => ({ ...prev, enrolmentCode: newCode }));
+                    }}
+                    className="px-3 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors duration-200 text-sm font-medium"
+                  >
+                    Regenerate
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500">This code will be used for student enrollment</p>
+              </div>
+
+              <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Icon</label>
                 <div className="flex flex-col gap-2">
                   <div className="flex gap-2">
@@ -248,10 +331,11 @@ export default function TeachingSectionsPage() {
                     {form.icon ? (
                       <div className="relative w-full h-full">
                         <Image
-                          src={form.icon}
+                          src={imageUrls[form.icon] || '/course1.jpg'}
                           alt="Section icon"
                           fill
                           className="object-contain"
+                          unoptimized
                         />
                       </div>
                     ) : (
@@ -284,6 +368,8 @@ export default function TeachingSectionsPage() {
                     await createSubjectInstance(form);
                     toast.success('Subject instance created successfully!');
                     handleCloseModal();
+                    // Refetch subject instances after successful creation
+                    await fetchSubjectInstances();
                   } catch (error) {
                     console.error(error);
                     toast.error('Failed to create subject instance');
@@ -321,41 +407,54 @@ export default function TeachingSectionsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredInstances.map((instance) => (
-          <div
-            key={instance.id}
-            className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 hover:scale-[1.02] transform"
-          >
-            <div className="relative h-40 w-full">
-              <Image
-                src={instance.icon || '/course1.jpg'}
-                alt={instance.subject.name}
-                fill
-                className="object-cover"
-              />
-            </div>
-
-            <div className="p-4 space-y-2">
-              <div className="flex justify-between items-center text-sm mb-1">
-                <span className="bg-pink-100 text-[#800000] px-2 py-0.5 rounded font-medium">
-                  {instance.subject.code}
-                </span>
-                <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded font-medium">
-                  Section {instance.section}
-                </span>
+        {filteredInstances.map((instance) => {
+          if (!instance || !instance.subject) return null;
+          
+          return (
+            <div
+              key={instance.id}
+              onClick={() => router.push(`/faculty-dashboard/${instance.id}`)}
+              className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 hover:scale-[1.02] transform cursor-pointer"
+            >
+              <div className="relative h-40 w-full">
+                <Image
+                  src={imageUrls[instance.icon] || '/course1.jpg'}
+                  alt={instance.subject.name || 'Subject'}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
               </div>
 
-              <h3 className="text-lg font-semibold text-gray-900">{instance.subject.name}</h3>
-              <p className="text-sm text-gray-600">Grade {instance.grade}</p>
-              <p className="text-sm text-gray-600">Teacher: {instance.teacherName}</p>
+              <div className="p-4 space-y-2">
+                <div className="flex justify-between items-center text-sm mb-1">
+                  <span className="bg-pink-100 text-[#800000] px-2 py-0.5 rounded font-medium">
+                    {instance.subject.code || 'No Code'}
+                  </span>
+                  <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded font-medium">
+                    Section {instance.section || 'N/A'}
+                  </span>
+                </div>
 
-              <div className="flex items-center text-sm text-gray-700 gap-1">
-                <Users className="w-4 h-4 text-[#800000]" />
-                {instance.enrollment === 1 ? 'Active' : 'Inactive'}
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {instance.subject.name || 'Unnamed Subject'}
+                </h3>
+                <p className="text-sm text-gray-600">Grade {instance.grade || 'N/A'}</p>
+                <p className="text-sm text-gray-600">Teacher: {instance.teacherName || 'Unassigned'}</p>
+
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center text-gray-700 gap-1">
+                    <Users className="w-4 h-4 text-[#800000]" />
+                    {instance.enrollment === 1 ? 'Active' : 'Inactive'}
+                  </div>
+                  <div className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-medium">
+                    Code: {instance.enrolmentCode}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {filteredInstances.length === 0 && (
           <div className="col-span-full text-center py-8 text-gray-500">
             No sections found.

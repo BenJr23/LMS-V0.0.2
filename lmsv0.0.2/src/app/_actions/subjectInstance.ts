@@ -23,6 +23,9 @@ export async function createSubjectInstance(formData: {
     throw new Error('Missing required fields');
   }
 
+  // Generate a random 4-digit enrollment code
+  const enrolmentCode = Math.floor(1000 + Math.random() * 9000);
+
   const instance = await prisma.subjectInstance.create({
     data: {
       teacherName,
@@ -32,6 +35,7 @@ export async function createSubjectInstance(formData: {
       icon,
       subjectId,
       createdById: userId,
+      enrolmentCode,
     },
   });
 
@@ -40,19 +44,65 @@ export async function createSubjectInstance(formData: {
 
 
 export async function getSubjectInstances() {
-    try {
-      const instances = await prisma.subjectInstance.findMany({
-        include: {
-          subject: true, // Includes related Subject data
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      });
-  
-      return instances;
-    } catch (error) {
-      console.error('Failed to fetch subject instances:', error);
-      throw new Error('Could not retrieve subject instances');
+  try {
+    const { userId } = await auth();
+    
+    if (!userId) {
+      return [];
     }
+
+    const instances = await prisma.subjectInstance.findMany({
+      where: {
+        createdById: userId
+      },
+      include: {
+        subject: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    // Filter out any instances with null subject data
+    const validInstances = instances.filter(instance => 
+      instance && 
+      instance.subject && 
+      instance.subject.name && 
+      instance.subject.code
+    );
+
+    return validInstances;
+  } catch (error) {
+    console.error('Failed to fetch subject instances:', error);
+    return [];
   }
+}
+
+export async function getSubjectInstance(id: string) {
+  try {
+    const { userId } = await auth();
+    
+    if (!userId) {
+      throw new Error('Unauthorized');
+    }
+
+    const instance = await prisma.subjectInstance.findUnique({
+      where: {
+        id,
+        createdById: userId
+      },
+      include: {
+        subject: true,
+      },
+    });
+
+    if (!instance) {
+      throw new Error('Subject instance not found');
+    }
+
+    return instance;
+  } catch (error) {
+    console.error('Failed to fetch subject instance:', error);
+    throw new Error('Could not retrieve subject instance');
+  }
+}
