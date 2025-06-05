@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { CalendarDays, Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2 } from 'lucide-react';
 import { getSubjectInstance } from '@/app/_actions/subjectInstance';
 import toast from 'react-hot-toast';
@@ -20,7 +20,8 @@ interface SubjectInstance {
   };
 }
 
-export default function CourseDetailPage({ params }: { params: { id: string } }) {
+export default function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
   const [activeTab, setActiveTab] = useState('announcements');
   const [subjectInstance, setSubjectInstance] = useState<SubjectInstance | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,7 +29,7 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
   useEffect(() => {
     const fetchSubjectInstance = async () => {
       try {
-        const data = await getSubjectInstance(params.id);
+        const data = await getSubjectInstance(resolvedParams.id);
         setSubjectInstance(data);
       } catch (error) {
         console.error('Failed to fetch subject instance:', error);
@@ -39,7 +40,7 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
     };
 
     fetchSubjectInstance();
-  }, [params.id]);
+  }, [resolvedParams.id]);
 
   const tabs = [
     { id: 'announcements', label: 'Announcements', icon: <Bell className="w-4 h-4 mr-1" /> },
