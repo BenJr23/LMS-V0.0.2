@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { Users, Plus, Upload } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { getSubjects } from '@/app/_actions/subject';
+import { createSubjectInstance } from '@/app/_actions/subjectInstance';
 
 export default function TeachingSectionsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -72,7 +73,7 @@ export default function TeachingSectionsPage() {
     section.code.toLowerCase().includes(search.toLowerCase())
   );
 
-  const filteredSubjects = subjects.filter(subject => 
+  const filteredSubjects = subjects.filter(subject =>
     subject.name.toLowerCase().includes(subjectSearch.toLowerCase()) ||
     subject.code.toLowerCase().includes(subjectSearch.toLowerCase())
   );
@@ -280,12 +281,6 @@ export default function TeachingSectionsPage() {
 
             <div className="flex justify-end gap-2 pt-4">
               <button
-                onClick={handleCloseModal}
-                className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300 transition-colors duration-200"
-              >
-                Cancel
-              </button>
-              <button
                 onClick={async () => {
                   try {
                     if (!form.subjectId) {
@@ -296,12 +291,12 @@ export default function TeachingSectionsPage() {
                       alert('Please fill in all required fields');
                       return;
                     }
-                    console.log('Submit this:', {
-                      ...form,
-                      subjectId: form.subjectId,
-                    });
-                    handleCloseModal();
+
+                    await createSubjectInstance(form);
+                    alert('Subject instance created!');
+                    handleCloseModal(); // ✅ only once
                   } catch (error) {
+                    console.error(error);
                     alert('Failed to create section');
                   }
                 }}
