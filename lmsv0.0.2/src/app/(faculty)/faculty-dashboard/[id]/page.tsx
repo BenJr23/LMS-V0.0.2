@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
-import { CalendarDays, Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2 } from 'lucide-react';
-import { getSubjectInstance } from '@/app/_actions/subjectInstance';
+import { CalendarDays, Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2, Settings } from 'lucide-react';
+import { getSubjectInstance, updateSubjectInstance } from '@/app/_actions/subjectInstance';
 import toast from 'react-hot-toast';
 
 interface SubjectInstance {
@@ -25,6 +25,13 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
   const [activeTab, setActiveTab] = useState('announcements');
   const [subjectInstance, setSubjectInstance] = useState<SubjectInstance | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    teacherName: '',
+    grade: '',
+    section: '',
+    enrollment: 1
+  });
 
   useEffect(() => {
     const fetchSubjectInstance = async () => {
@@ -85,6 +92,32 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     return acc;
   }, {} as Record<string, typeof requirements>);
 
+  const handleOpenEditModal = () => {
+    if (subjectInstance) {
+      setEditForm({
+        teacherName: subjectInstance.teacherName,
+        grade: subjectInstance.grade,
+        section: subjectInstance.section,
+        enrollment: subjectInstance.enrollment
+      });
+      setIsEditModalOpen(true);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      if (!subjectInstance) return;
+
+      const updatedInstance = await updateSubjectInstance(subjectInstance.id, editForm);
+      setSubjectInstance(updatedInstance);
+      setIsEditModalOpen(false);
+      toast.success('Subject instance updated successfully');
+    } catch (error) {
+      console.error('Failed to update subject instance:', error);
+      toast.error('Failed to update subject instance');
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center">
@@ -115,21 +148,106 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
           </span>
         </div>
         <div className="flex-1">
-          <h2 className="text-3xl font-extrabold text-gray-900 mb-1 leading-tight">
-            {subjectInstance.subject.name}
-          </h2>
-          <div className="flex flex-wrap items-center gap-4 text-base text-gray-700 mt-1">
-            <span className="flex items-center gap-1">
-              <UserCircle2 className="w-5 h-5 text-[#800000]" /> 
-              {subjectInstance.teacherName}
-            </span>
-            <span className="flex items-center gap-1">
-              <CalendarDays className="w-5 h-5 text-[#800000]" /> 
-              Grade {subjectInstance.grade} - Section {subjectInstance.section}
-            </span>
+          <div className="flex justify-between items-start">
+            <div>
+              <h2 className="text-3xl font-extrabold text-gray-900 mb-1 leading-tight">
+                {subjectInstance.subject.name}
+              </h2>
+              <div className="flex flex-wrap items-center gap-4 text-base text-gray-700 mt-1">
+                <span className="flex items-center gap-1">
+                  <UserCircle2 className="w-5 h-5 text-[#800000]" /> 
+                  {subjectInstance.teacherName}
+                </span>
+                <span className="flex items-center gap-1">
+                  <CalendarDays className="w-5 h-5 text-[#800000]" /> 
+                  Grade {subjectInstance.grade} - Section {subjectInstance.section}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={handleOpenEditModal}
+              className="p-2 hover:bg-pink-100 rounded-full transition-colors duration-200"
+            >
+              <Settings className="w-5 h-5 text-[#800000]" />
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h3 className="text-xl font-semibold text-[#800000] mb-4">Edit Subject Instance</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Teacher Name</label>
+                <input
+                  type="text"
+                  value={editForm.teacherName}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, teacherName: e.target.value }))}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] text-gray-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Grade</label>
+                <select
+                  value={editForm.grade}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, grade: e.target.value }))}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] text-gray-800 bg-white"
+                >
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                  <option value="9">9</option>
+                  <option value="10">10</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Section</label>
+                <select
+                  value={editForm.section}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, section: e.target.value }))}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] text-gray-800 bg-white"
+                >
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                  <option value="C">C</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Enrollment Status</label>
+                <select
+                  value={editForm.enrollment}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, enrollment: parseInt(e.target.value) }))}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] text-gray-800 bg-white"
+                >
+                  <option value={1}>Active</option>
+                  <option value={0}>Inactive</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300 transition-colors duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                className="px-4 py-2 rounded bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="border-b border-gray-200 flex gap-6 text-base font-semibold text-gray-700 mb-6">

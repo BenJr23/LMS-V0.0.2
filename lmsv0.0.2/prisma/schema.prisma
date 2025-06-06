@@ -36,7 +36,28 @@ model SubjectInstance {
   subjectId    String
   createdById  String
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relations
   subject      Subject  @relation(fields: [subjectId], references: [id])
+
+  instances   Requirement[]  // One-to-many relationship
+}
+
+
+model Requirement {
+  id               String   @id @default(cuid())
+  name             String
+  title            String?     // Optional
+  content          String?     // Optional (e.g., for Forum instructions)
+  scoreBase        Int
+  deadline         DateTime
+  type             String      // e.g., "Forum", "Assignment", "Activity", "Quiz"
+  subjectInstanceId String
+
+  createdAt        DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  subjectInstance  SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
 }
