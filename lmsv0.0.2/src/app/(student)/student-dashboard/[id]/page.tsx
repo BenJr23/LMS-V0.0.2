@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, use } from 'react';
-import { CalendarDays, Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2 } from 'lucide-react';
+import { CalendarDays, Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2, MessageSquare, HelpCircle, Users, Eye, MoreVertical, Calendar } from 'lucide-react';
 
 export default function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [activeTab, setActiveTab] = useState('announcements');
@@ -54,23 +54,17 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
   const requirements = [
     { type: 'Forum', title: 'Discussion: Why Computer Science?', due: 'Sep 9, 2023 7:59 AM', status: 'Not Started', points: '25 pts' },
     { type: 'Quiz', title: 'Quiz #1: Introduction to Programming', due: 'Sep 11, 2023 7:59 AM', status: 'Not Started', points: '50 pts' },
-    { type: 'Assignment', title: 'Assignment #1: Programming Basics', due: 'Sep 16, 2023 7:59 AM', status: 'Not Submitted', points: '100 pts' }
+    { type: 'Assignment', title: 'Assignment #1: Programming Basics', due: 'Sep 16, 2023 7:59 AM', status: 'Not Submitted', points: '100 pts' },
+    { type: 'Activity', title: 'Group Project: Algorithm Design', due: 'Sep 20, 2023 7:59 AM', status: 'Not Started', points: '150 pts' }
   ];
 
   // Group requirements by type
   const groupedRequirements = requirements.reduce((acc, req) => {
-    const key = req.type.toUpperCase() + 'S'; // e.g., FORUMS, ASSIGNMENTS
+    const key = req.type.toUpperCase() + 'S';
     if (!acc[key]) acc[key] = [];
     acc[key].push(req);
     return acc;
   }, {} as Record<string, typeof requirements>);
-
-  // Sample activities
-  const activities = [
-    { activity: 'Submitted Assignment #1', time: '2 hours ago' },
-    { activity: 'Posted in Forum: Why Computer Science?', time: '1 day ago' },
-    { activity: 'Viewed Quiz #1', time: '3 days ago' },
-  ];
 
   return (
     <div className="p-0 md:p-6">
@@ -158,38 +152,67 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
       {/* Requirements Tab */}
       {activeTab === 'requirements' && (
         <div>
-          {/* Grouped Requirements Section */}
           {Object.entries(groupedRequirements).map(([section, items]) => (
-            <div key={section} className="mb-6">
-              <h4 className="text-md font-bold text-[#800000] mb-2 uppercase tracking-wide">{section}</h4>
-              <div className="bg-white rounded-lg shadow overflow-x-auto border border-pink-100">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="text-left border-b bg-pink-50">
-                      <th className="p-3">Title</th>
-                      <th className="p-3">Due Date</th>
-                      <th className="p-3">Status</th>
-                      <th className="p-3">Points</th>
-                      <th className="p-3">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((req, i) => (
-                      <tr key={i} className="border-b last:border-b-0">
-                        <td className="p-3 whitespace-normal break-words max-w-xs text-gray-800">{req.title}</td>
-                        <td className="p-3 text-gray-800">{req.due}</td>
-                        <td className="p-3 text-gray-800">
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold
-                            ${req.status === 'Not Started' ? 'bg-yellow-100 text-yellow-800' : req.status === 'Not Submitted' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>{req.status}</span>
-                        </td>
-                        <td className="p-3 text-gray-800">{req.points}</td>
-                        <td className="p-3">
-                          <button className="px-3 py-1 rounded bg-[#800000] text-white text-xs font-semibold shadow hover:bg-[#a52a2a] transition">View</button>
-                        </td>
+            <div key={section} className="mb-8">
+              <h4 className="text-lg font-bold text-[#800000] mb-3 uppercase tracking-wide flex items-center gap-2">
+                <ClipboardList className="w-5 h-5" />
+                {section}
+              </h4>
+              <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-pink-100">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="bg-pink-50 border-b border-pink-100">
+                        <th className="p-4 text-left font-semibold text-[#800000] w-[35%]">Title</th>
+                        <th className="p-4 text-left font-semibold text-[#800000] w-[20%]">Due Date</th>
+                        <th className="p-4 text-left font-semibold text-[#800000] w-[15%]">Status</th>
+                        <th className="p-4 text-left font-semibold text-[#800000] w-[10%]">Points</th>
+                        <th className="p-4 text-left font-semibold text-[#800000] w-[20%]">Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-pink-50">
+                      {items.map((req, i) => (
+                        <tr key={i} className="hover:bg-pink-50/50 transition-colors duration-150">
+                          <td className="p-4 text-gray-800 font-medium">
+                            <div className="flex items-center gap-2">
+                              {req.type === 'Forum' && <MessageSquare className="w-4 h-4 text-blue-500" />}
+                              {req.type === 'Quiz' && <HelpCircle className="w-4 h-4 text-purple-500" />}
+                              {req.type === 'Assignment' && <FileText className="w-4 h-4 text-orange-500" />}
+                              {req.type === 'Activity' && <Users className="w-4 h-4 text-green-500" />}
+                              <span className="line-clamp-2">{req.title}</span>
+                            </div>
+                          </td>
+                          <td className="p-4 text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-gray-400" />
+                              {req.due}
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium
+                              ${req.status === 'Not Started' ? 'bg-yellow-100 text-yellow-800' : 
+                                req.status === 'Not Submitted' ? 'bg-red-100 text-red-700' : 
+                                'bg-green-100 text-green-700'}`}>
+                              {req.status}
+                            </span>
+                          </td>
+                          <td className="p-4 text-gray-600 font-medium">{req.points}</td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-2">
+                              <button className="px-3 py-1.5 rounded-md bg-[#800000] text-white text-xs font-semibold shadow-sm hover:bg-[#a52a2a] transition-colors duration-200 flex items-center gap-1">
+                                <Eye className="w-3.5 h-3.5" />
+                                View
+                              </button>
+                              <button className="p-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors duration-200">
+                                <MoreVertical className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           ))}
