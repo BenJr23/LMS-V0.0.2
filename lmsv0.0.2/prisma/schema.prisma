@@ -47,7 +47,7 @@ model SubjectInstance {
 
 model Requirement {
   id               String   @id @default(cuid())
-  name             String
+  requirementNumber Int
   title            String?     // Optional
   content          String?     // Optional (e.g., for Forum instructions)
   scoreBase        Int

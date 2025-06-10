@@ -4,6 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2, Settings, MessageSquare, HelpCircle, Users, Eye, MoreVertical, Calendar, Plus } from 'lucide-react';
 import { getSubjectInstance, updateSubjectInstance } from '@/app/_actions/subjectInstance';
 import toast from 'react-hot-toast';
+import RichTextEditor from '@/components/RichTextEditor';
 
 interface SubjectInstance {
   id: string;
@@ -26,11 +27,20 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
   const [subjectInstance, setSubjectInstance] = useState<SubjectInstance | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAddAssignmentModalOpen, setIsAddAssignmentModalOpen] = useState(false);
   const [editForm, setEditForm] = useState({
     teacherName: '',
     grade: '',
     section: '',
     enrollment: 1
+  });
+  const [assignmentForm, setAssignmentForm] = useState({
+    requirementNumber: '',
+    title: '',
+    content: '',
+    deadline: '',
+    baseScore: '',
+    type: 'Assignment'
   });
 
   useEffect(() => {
@@ -119,6 +129,42 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     }
   };
 
+  const handleOpenAddModal = (type: string) => {
+    // Convert the type to proper case (e.g., "FORUM" -> "Forum")
+    const formattedType = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+    
+    setAssignmentForm({
+      requirementNumber: '',
+      title: '',
+      content: '',
+      deadline: '',
+      baseScore: '',
+      type: formattedType
+    });
+    setIsAddAssignmentModalOpen(true);
+  };
+
+  const handleAddAssignment = async () => {
+    try {
+      // TODO: Implement the API call to save the requirement
+      console.log('Saving requirement:', assignmentForm);
+      setIsAddAssignmentModalOpen(false);
+      toast.success(`${assignmentForm.type} created successfully`);
+      // Reset form
+      setAssignmentForm({
+        requirementNumber: '',
+        title: '',
+        content: '',
+        deadline: '',
+        baseScore: '',
+        type: 'Assignment'
+      });
+    } catch (error) {
+      console.error('Failed to create requirement:', error);
+      toast.error('Failed to create requirement');
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center">
@@ -156,11 +202,11 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
               </h2>
               <div className="flex flex-wrap items-center gap-4 text-base text-gray-700 mt-1">
                 <span className="flex items-center gap-1">
-                  <UserCircle2 className="w-5 h-5 text-[#800000]" /> 
+                  <UserCircle2 className="w-5 h-5 text-[#800000]" />
                   {subjectInstance.teacherName}
                 </span>
                 <span className="flex items-center gap-1">
-                  <Calendar className="w-5 h-5 text-[#800000]" /> 
+                  <Calendar className="w-5 h-5 text-[#800000]" />
                   Grade {subjectInstance.grade} - Section {subjectInstance.section}
                 </span>
               </div>
@@ -180,7 +226,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
             <h3 className="text-xl font-semibold text-[#800000] mb-4">Edit Subject Instance</h3>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Teacher Name</label>
@@ -245,6 +291,142 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
               >
                 Save Changes
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Requirement Modal */}
+      {isAddAssignmentModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl my-8">
+            {/* Modal Header */}
+            <div className="border-b border-gray-200 px-6 py-4 sticky top-0 bg-white z-10">
+              <h3 className="text-xl font-semibold text-[#800000]">Create New {assignmentForm.type}</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                {assignmentForm.type === 'Forum' ? 'Create a new discussion forum for students to engage in topic-related conversations.' :
+                 assignmentForm.type === 'Quiz' ? 'Create a new quiz to assess student understanding of the course material.' :
+                 assignmentForm.type === 'Activity' ? 'Create a new activity to encourage student participation and learning.' :
+                 'Create a new assignment for students to complete and submit.'}
+              </p>
+            </div>
+
+            <div className="p-6 space-y-6 max-h-[calc(100vh-16rem)] overflow-y-auto">
+              {/* Number Section */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  {assignmentForm.type === 'Forum' ? 'Forum Number' :
+                   assignmentForm.type === 'Quiz' ? 'Quiz Number' :
+                   assignmentForm.type === 'Activity' ? 'Activity Number' :
+                   'Assignment Number'}
+                </label>
+                <input
+                  type="number"
+                  value={assignmentForm.requirementNumber}
+                  onChange={(e) => setAssignmentForm(prev => ({ ...prev, requirementNumber: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent text-gray-800 transition-all duration-200"
+                  placeholder={`Enter ${assignmentForm.type.toLowerCase()} number (e.g., 1, 2, 3)`}
+                  min="1"
+                  step="1"
+                />
+              </div>
+
+              {/* Title Section */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  {assignmentForm.type === 'Forum' ? 'Discussion Topic' :
+                   assignmentForm.type === 'Quiz' ? 'Quiz Title' :
+                   assignmentForm.type === 'Activity' ? 'Activity Title' :
+                   'Assignment Title'}
+                </label>
+                <input
+                  type="text"
+                  value={assignmentForm.title}
+                  onChange={(e) => setAssignmentForm(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent text-gray-800 transition-all duration-200"
+                  placeholder={`Enter ${assignmentForm.type.toLowerCase()} title`}
+                />
+              </div>
+
+              {/* Content Section */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  {assignmentForm.type === 'Forum' ? 'Discussion Guidelines' :
+                   assignmentForm.type === 'Quiz' ? 'Quiz Instructions' :
+                   assignmentForm.type === 'Activity' ? 'Activity Description' :
+                   'Assignment Instructions'}
+                </label>
+                <p className="text-sm text-gray-500 mb-2">
+                  {assignmentForm.type === 'Forum' ? 'Provide guidelines and topics for discussion. Students will be able to post their responses and engage with others.' :
+                   assignmentForm.type === 'Quiz' ? 'Provide clear instructions and any specific requirements for the quiz.' :
+                   assignmentForm.type === 'Activity' ? 'Describe the activity, its objectives, and what students need to do to complete it.' :
+                   'Provide detailed instructions and requirements for the assignment.'}
+                </p>
+                <RichTextEditor
+                  content={assignmentForm.content}
+                  onChange={(content) => setAssignmentForm(prev => ({ ...prev, content }))}
+                  placeholder={`Enter ${assignmentForm.type.toLowerCase()} instructions here...`}
+                  minHeight="300px"
+                  maxHeight="600px"
+                />
+              </div>
+
+              {/* Deadline and Score Section */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    {assignmentForm.type === 'Forum' ? 'Discussion End Date' :
+                     assignmentForm.type === 'Quiz' ? 'Quiz Deadline' :
+                     assignmentForm.type === 'Activity' ? 'Activity Deadline' :
+                     'Submission Deadline'}
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={assignmentForm.deadline}
+                    onChange={(e) => setAssignmentForm(prev => ({ ...prev, deadline: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent text-gray-800 transition-all duration-200"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    {assignmentForm.type === 'Forum' ? 'Participation Points' :
+                     assignmentForm.type === 'Quiz' ? 'Quiz Points' :
+                     assignmentForm.type === 'Activity' ? 'Activity Points' :
+                     'Maximum Points'}
+                  </label>
+                  <input
+                    type="number"
+                    value={assignmentForm.baseScore}
+                    onChange={(e) => setAssignmentForm(prev => ({ ...prev, baseScore: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent text-gray-800 transition-all duration-200"
+                    placeholder={`Enter ${assignmentForm.type.toLowerCase()} points`}
+                    min="0"
+                    step="1"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 rounded-b-xl sticky bottom-0">
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setIsAddAssignmentModalOpen(false)}
+                  className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddAssignment}
+                  className="px-4 py-2 rounded-lg bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200 font-medium shadow-sm"
+                >
+                  {assignmentForm.type === 'Forum' ? 'Create Discussion' :
+                   assignmentForm.type === 'Quiz' ? 'Create Quiz' :
+                   assignmentForm.type === 'Activity' ? 'Create Activity' :
+                   'Create Assignment'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -328,7 +510,10 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                   <ClipboardList className="w-5 h-5" />
                   {section}
                 </h4>
-                <button className="p-1.5 rounded-md bg-[#800000] text-white hover:bg-[#a52a2a] transition-colors duration-200 shadow-sm">
+                <button
+                  onClick={() => handleOpenAddModal(section.slice(0, -1))}
+                  className="p-1.5 rounded-md bg-[#800000] text-white hover:bg-[#a52a2a] transition-colors duration-200 shadow-sm"
+                >
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
@@ -364,9 +549,9 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                           </td>
                           <td className="p-4">
                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium
-                              ${req.status === 'Not Started' ? 'bg-yellow-100 text-yellow-800' : 
-                                req.status === 'Not Submitted' ? 'bg-red-100 text-red-700' : 
-                                'bg-green-100 text-green-700'}`}>
+                              ${req.status === 'Not Started' ? 'bg-yellow-100 text-yellow-800' :
+                                req.status === 'Not Submitted' ? 'bg-red-100 text-red-700' :
+                                  'bg-green-100 text-green-700'}`}>
                               {req.status}
                             </span>
                           </td>
