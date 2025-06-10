@@ -1,12 +1,11 @@
 'use client';
 
-import { useRouter } from 'next/navigation'; // at the top
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Mail, Lock } from 'lucide-react';
 import Image from 'next/image';
 import { useSignIn } from '@clerk/nextjs';
 import { isClerkAPIResponseError } from '@clerk/nextjs/errors';
-
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -14,9 +13,9 @@ export default function Home() {
   const [touched, setTouched] = useState({ email: false, password: false });
   const [focused, setFocused] = useState({ email: false, password: false });
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { setActive, signIn, isLoaded } = useSignIn();
-
 
   const emailRegex = /^[a-zA-Z0-9._%+-]{3,40}@[a-zA-Z0-9.-]+\.(com)$/;
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,14}$/;
@@ -40,51 +39,69 @@ export default function Home() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setIsLoading(true);
   
-    if (!isLoaded || !isEmailValid || !isPasswordValid) return;
+    if (!isLoaded || !isEmailValid || !isPasswordValid) {
+      setIsLoading(false);
+      return;
+    }
   
     try {
+      // Step 1: Sign in with Clerk
       const result = await signIn.create({ identifier: email, password });
   
       if (result.status !== 'complete') {
         setError('Verification step required.');
+        setIsLoading(false);
         return;
       }
   
-      // ✅ Activate the session
+      // Step 2: Activate the session
       await setActive({ session: result.createdSessionId });
   
-      // ✅ Fetch the user's role from the API
+      // Step 3: Fetch the user's role from our API
       const res = await fetch(`/api/fetch-roles?email=${encodeURIComponent(email)}`);
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to fetch user role');
+      }
+
       const data = await res.json();
-      const role = data?.role?.toLowerCase();
-  
-      if (!role) {
+      
+      if (!data.role) {
         router.push('/unauthorized');
         return;
       }
   
-      // ✅ Redirect based on role
-      if (role === 'admin') {
-        router.push('/admin-dashboard');
-      } else if (role === 'faculty') {
-        router.push('/faculty-dashboard');
-      } else if (role === 'student') {
-        router.push('/student-dashboard');
-      } else {
-        router.push('/unauthorized');
+      // Step 4: Redirect based on role
+      const role = data.role.toLowerCase();
+      switch (role) {
+        case 'admin':
+          router.push('/admin-dashboard');
+          break;
+        case 'faculty':
+          router.push('/faculty-dashboard');
+          break;
+        case 'student':
+          router.push('/student-dashboard');
+          break;
+        default:
+          router.push('/unauthorized');
       }
   
     } catch (err) {
       if (isClerkAPIResponseError(err)) {
         setError(err.errors[0]?.message || 'Sign-in failed');
+      } else if (err instanceof Error) {
+        setError(err.message);
       } else {
-        setError('Unexpected error during login.');
+        setError('An unexpected error occurred during login.');
       }
+    } finally {
+      setIsLoading(false);
     }
   };
-  
-  
 
   return (
     <div
@@ -117,6 +134,7 @@ export default function Home() {
                 }}
                 onFocus={() => setFocused((prev) => ({ ...prev, email: true }))}
                 autoComplete="off"
+                disabled={isLoading}
               />
             </div>
             <div className="min-h-[1rem]">
@@ -146,6 +164,7 @@ export default function Home() {
                 }}
                 onFocus={() => setFocused((prev) => ({ ...prev, password: true }))}
                 autoComplete="off"
+                disabled={isLoading}
               />
             </div>
             <div className="min-h-[1rem]">
@@ -159,7 +178,7 @@ export default function Home() {
 
           <div className="flex justify-between items-center text-sm">
             <label className="flex items-center space-x-1 text-gray-700">
-              <input type="checkbox" />
+              <input type="checkbox" disabled={isLoading} />
               <span>Remember me</span>
             </label>
             <a href="#" className="text-gray-700 hover:underline font-medium">
@@ -169,13 +188,13 @@ export default function Home() {
 
           <button
             type="submit"
-            disabled={!isEmailValid || !isPasswordValid}
-            className={`w-full py-2 rounded-md transition ${!isEmailValid || !isPasswordValid
+            disabled={!isEmailValid || !isPasswordValid || isLoading}
+            className={`w-full py-2 rounded-md transition ${!isEmailValid || !isPasswordValid || isLoading
               ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
               : 'bg-red-700 text-white hover:bg-red-800'
               }`}
           >
-            Sign in
+            {isLoading ? 'Signing in...' : 'Sign in'}
           </button>
 
           {error && <p className="text-xs text-red-600 text-center mt-2">{error}</p>}
