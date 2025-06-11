@@ -1,7 +1,10 @@
 'use server';
 
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@/generated/prisma';
 import { revalidatePath } from 'next/cache';
+import { auth } from '@clerk/nextjs/server';
+
+const prisma = new PrismaClient();
 
 export interface CreateRequirementData {
   requirementNumber: number;
@@ -15,6 +18,12 @@ export interface CreateRequirementData {
 
 export async function createRequirement(data: CreateRequirementData) {
   try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      throw new Error('Unauthorized');
+    }
+
     // Validate the data
     if (!data.requirementNumber || !data.title || !data.scoreBase || !data.deadline || !data.type || !data.subjectInstanceId) {
       throw new Error('Missing required fields');
@@ -38,7 +47,8 @@ export async function createRequirement(data: CreateRequirementData) {
         scoreBase: data.scoreBase,
         deadline: data.deadline,
         type: data.type,
-        subjectInstanceId: data.subjectInstanceId
+        subjectInstanceId: data.subjectInstanceId,
+        createdById: userId
       }
     });
 

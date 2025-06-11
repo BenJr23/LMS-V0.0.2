@@ -23,6 +23,7 @@ model Subject {
   createdAt   DateTime           @default(now())
 
   instances   SubjectInstance[]  // One-to-many relationship
+  updatedAt   DateTime @updatedAt
 }
 
 model SubjectInstance {
@@ -54,9 +55,9 @@ model Requirement {
   deadline         DateTime
   type             String      // e.g., "Forum", "Assignment", "Activity", "Quiz"
   subjectInstanceId String
-
+  createdById      String      // Clerk userId
   createdAt        DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt        DateTime @updatedAt
 
   // Relations
   subjectInstance  SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
