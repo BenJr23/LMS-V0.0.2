@@ -1,36 +1,37 @@
 'use server';
 
-import { PrismaClient } from '@/generated/prisma';
+import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
-
-const prisma = new PrismaClient();
 
 export async function createSubject(formData: FormData) {
     const { userId } = await auth();
 
     if (!userId) {
-        throw new Error('Unauthorized');
+        return { success: false, error: 'Unauthorized' };
     }
 
     const name = formData.get('name') as string;
     const code = formData.get('code') as string;
 
     if (!name || !code) {
-        throw new Error('Missing name or code');
+        return { success: false, error: 'Missing name or code' };
     }
 
-    const newSubject = await prisma.subject.create({
-        data: {
-            name,
-            code,
-            createdById: userId,
-        },
-    });
+    try {
+        const newSubject = await prisma.subject.create({
+            data: {
+                name,
+                code,
+                createdById: userId,
+            },
+        });
 
-    return newSubject;
+        return { success: true, data: newSubject };
+    } catch (error) {
+        console.error('Failed to create subject:', error);
+        return { success: false, error: 'Failed to create subject' };
+    }
 }
-
-
 
 export async function getSubjects() {
     try {
@@ -38,24 +39,28 @@ export async function getSubjects() {
             orderBy: { name: 'asc' },
         });
 
-        return subjects;
+        return { success: true, data: subjects };
     } catch (error) {
         console.error('Failed to fetch subjects:', error);
-        throw new Error('Failed to fetch subjects');
+        return { success: false, error: 'Failed to fetch subjects' };
     }
 }
-
 
 export async function deleteSubject(id: string) {
     const { userId } = await auth();
 
     if (!userId) {
-        throw new Error('Unauthorized');
+        return { success: false, error: 'Unauthorized' };
     }
 
-    const deleted = await prisma.subject.delete({
-        where: { id },
-    });
+    try {
+        const deleted = await prisma.subject.delete({
+            where: { id },
+        });
 
-    return deleted;
+        return { success: true, data: deleted };
+    } catch (error) {
+        console.error('Failed to delete subject:', error);
+        return { success: false, error: 'Failed to delete subject' };
+    }
 }

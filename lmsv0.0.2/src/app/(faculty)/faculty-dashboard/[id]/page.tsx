@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2, Settings, MessageSquare, HelpCircle, Users, Eye, MoreVertical, Calendar, Plus } from 'lucide-react';
 import { getSubjectInstance, updateSubjectInstance } from '@/app/_actions/subjectInstance';
 import { getRequirements } from '@/app/_actions/requirement';
@@ -36,8 +36,7 @@ interface Requirement {
   updatedAt: Date;
 }
 
-export default function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params);
+export default function CourseDetailPage({ params }: { params: { id: string } }) {
   const [activeTab, setActiveTab] = useState('announcements');
   const [subjectInstance, setSubjectInstance] = useState<SubjectInstance | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,18 +59,22 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
   const fetchData = async () => {
     try {
-      const [instanceData, requirementsData] = await Promise.all([
-        getSubjectInstance(resolvedParams.id),
-        getRequirements(resolvedParams.id)
+      const [instanceResponse, requirementsResponse] = await Promise.all([
+        getSubjectInstance(params.id),
+        getRequirements(params.id)
       ]);
 
-      if (instanceData) {
-        setSubjectInstance(instanceData);
+      if (instanceResponse.success && instanceResponse.data) {
+        setSubjectInstance(instanceResponse.data);
+      } else {
+        toast.error(instanceResponse.error || 'Failed to load course details');
+        setSubjectInstance(null);
       }
 
-      if (requirementsData.success && requirementsData.data) {
-        setRequirements(requirementsData.data);
+      if (requirementsResponse.success && requirementsResponse.data) {
+        setRequirements(requirementsResponse.data);
       } else {
+        toast.error(requirementsResponse.error || 'Failed to load requirements');
         setRequirements([]);
       }
     } catch (error) {
@@ -85,7 +88,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
   useEffect(() => {
     fetchData();
-  }, [resolvedParams.id]);
+  }, [params.id]);
 
   const tabs = [
     { id: 'announcements', label: 'Announcements', icon: <Bell className="w-4 h-4 mr-1" /> },
@@ -140,10 +143,14 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     try {
       if (!subjectInstance) return;
 
-      const updatedInstance = await updateSubjectInstance(subjectInstance.id, editForm);
-      setSubjectInstance(updatedInstance);
-      setIsEditModalOpen(false);
-      toast.success('Subject instance updated successfully');
+      const response = await updateSubjectInstance(subjectInstance.id, editForm);
+      if (response.success && response.data) {
+        setSubjectInstance(response.data);
+        setIsEditModalOpen(false);
+        toast.success('Subject instance updated successfully');
+      } else {
+        toast.error(response.error || 'Failed to update subject instance');
+      }
     } catch (error) {
       console.error('Failed to update subject instance:', error);
       toast.error('Failed to update subject instance');
@@ -179,7 +186,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         scoreBase: parseInt(assignmentForm.baseScore),
         deadline: new Date(assignmentForm.deadline),
         type: assignmentForm.type as 'Forum' | 'Assignment' | 'Activity' | 'Quiz',
-        subjectInstanceId: resolvedParams.id
+        subjectInstanceId: params.id
       });
 
       if (!result.success) {

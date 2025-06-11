@@ -1,9 +1,7 @@
 'use server';
 
-import { PrismaClient } from '@/generated/prisma';
+import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
-
-const prisma = new PrismaClient();
 
 export async function createSubjectInstance(formData: {
   teacherName: string;
@@ -17,12 +15,14 @@ export async function createSubjectInstance(formData: {
   try {
     const { userId } = await auth();
 
-    if (!userId) throw new Error('Unauthorized');
+    if (!userId) {
+      return { success: false, error: 'Unauthorized' };
+    }
 
     const { teacherName, grade, section, enrollment, icon, subjectId, enrolmentCode } = formData;
 
     if (!teacherName || !grade || !section || !subjectId) {
-      throw new Error('Missing required fields');
+      return { success: false, error: 'Missing required fields' };
     }
 
     const instance = await prisma.subjectInstance.create({
@@ -41,20 +41,19 @@ export async function createSubjectInstance(formData: {
       },
     });
 
-    return instance;
+    return { success: true, data: instance };
   } catch (error) {
     console.error('Error creating subject instance:', error);
-    throw error;
+    return { success: false, error: 'Failed to create subject instance' };
   }
 }
-
 
 export async function getSubjectInstances() {
   try {
     const { userId } = await auth();
     
     if (!userId) {
-      return [];
+      return { success: false, error: 'Unauthorized' };
     }
 
     const instances = await prisma.subjectInstance.findMany({
@@ -77,10 +76,10 @@ export async function getSubjectInstances() {
       instance.subject.code
     );
 
-    return validInstances;
+    return { success: true, data: validInstances };
   } catch (error) {
     console.error('Failed to fetch subject instances:', error);
-    return [];
+    return { success: false, error: 'Failed to fetch subject instances' };
   }
 }
 
@@ -89,7 +88,7 @@ export async function getSubjectInstance(id: string) {
     const { userId } = await auth();
     
     if (!userId) {
-      throw new Error('Unauthorized');
+      return { success: false, error: 'Unauthorized' };
     }
 
     const instance = await prisma.subjectInstance.findUnique({
@@ -103,13 +102,13 @@ export async function getSubjectInstance(id: string) {
     });
 
     if (!instance) {
-      throw new Error('Subject instance not found');
+      return { success: false, error: 'Subject instance not found' };
     }
 
-    return instance;
+    return { success: true, data: instance };
   } catch (error) {
     console.error('Failed to fetch subject instance:', error);
-    throw new Error('Could not retrieve subject instance');
+    return { success: false, error: 'Failed to fetch subject instance' };
   }
 }
 
@@ -123,7 +122,7 @@ export async function updateSubjectInstance(id: string, data: {
     const { userId } = await auth();
     
     if (!userId) {
-      throw new Error('Unauthorized');
+      return { success: false, error: 'Unauthorized' };
     }
 
     const updatedInstance = await prisma.subjectInstance.update({
@@ -143,12 +142,12 @@ export async function updateSubjectInstance(id: string, data: {
     });
 
     if (!updatedInstance) {
-      throw new Error('Subject instance not found');
+      return { success: false, error: 'Subject instance not found' };
     }
 
-    return updatedInstance;
+    return { success: true, data: updatedInstance };
   } catch (error) {
     console.error('Error updating subject instance:', error);
-    throw error;
+    return { success: false, error: 'Failed to update subject instance' };
   }
 }

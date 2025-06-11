@@ -1,20 +1,77 @@
 'use client';
 
-import { useState, use } from 'react';
-import { CalendarDays, Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2, MessageSquare, HelpCircle, Users, Eye, MoreVertical, Calendar } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2, MessageSquare, HelpCircle, Users, Eye, MoreVertical, Calendar } from 'lucide-react';
+import { getSubjectInstance } from '@/app/_actions/subjectInstance';
+import { getRequirements } from '@/app/_actions/requirement';
+import toast from 'react-hot-toast';
 
-export default function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const [activeTab, setActiveTab] = useState('announcements');
-  const { id } = use(params);
-  const courseId = id.toUpperCase(); // show CS101 instead of cs101
-
-  // You could fetch course data based on ID here in real projects
-
-  const courseInfo = {
-    title: 'Introduction to Computer Science',
-    professor: 'Dr. Alan Turing',
-    schedule: 'Mon, Wed 10:00 AM – 11:30 AM'
+interface SubjectInstance {
+  id: string;
+  teacherName: string;
+  grade: string;
+  section: string;
+  enrollment: number;
+  icon: string;
+  enrolmentCode: number;
+  subject: {
+    id: string;
+    name: string;
+    code: string;
   };
+}
+
+interface Requirement {
+  id: string;
+  requirementNumber: number;
+  title: string | null;
+  content: string | null;
+  scoreBase: number;
+  deadline: Date;
+  type: string;
+  subjectInstanceId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export default function CourseDetailPage({ params }: { params: { id: string } }) {
+  const [activeTab, setActiveTab] = useState('announcements');
+  const [subjectInstance, setSubjectInstance] = useState<SubjectInstance | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [requirements, setRequirements] = useState<Requirement[]>([]);
+
+  const fetchData = async () => {
+    try {
+      const [instanceResponse, requirementsResponse] = await Promise.all([
+        getSubjectInstance(params.id),
+        getRequirements(params.id)
+      ]);
+
+      if (instanceResponse.success && instanceResponse.data) {
+        setSubjectInstance(instanceResponse.data);
+      } else {
+        toast.error(instanceResponse.error || 'Failed to load course details');
+        setSubjectInstance(null);
+      }
+
+      if (requirementsResponse.success && requirementsResponse.data) {
+        setRequirements(requirementsResponse.data);
+      } else {
+        toast.error(requirementsResponse.error || 'Failed to load requirements');
+        setRequirements([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+      toast.error('Failed to load course details');
+      setRequirements([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [params.id]);
 
   const tabs = [
     { id: 'announcements', label: 'Announcements', icon: <Bell className="w-4 h-4 mr-1" /> },
@@ -24,38 +81,25 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
   const announcements = [
     {
-      title: 'Assignment #1 Posted',
-      author: courseInfo.professor,
-      timeAgo: 'over 1 year ago',
-      content: 'The first assignment has been posted. Please check the Requirements tab for details. Due date is September 15th.'
-    },
-    {
-      title: 'Welcome to ' + courseId,
-      author: courseInfo.professor,
-      timeAgo: 'almost 2 years ago',
-      content: `Welcome to ${courseInfo.title}! This course will cover the fundamentals of programming and computer science concepts.`
+      title: 'Welcome to ' + subjectInstance?.subject.code,
+      author: subjectInstance?.teacherName,
+      timeAgo: 'Just now',
+      content: `Welcome to ${subjectInstance?.subject.name}! This course will cover the fundamentals of the subject.`
     }
   ];
 
   const files = [
     {
-      module: 'Module 1: Introduction to Programming',
+      module: 'Module 1: Introduction',
       items: [
         { name: 'Course Syllabus.pdf', size: '1.2 MB' },
-        { name: 'Introduction to Programming.pptx', size: '3.5 MB' }
+        { name: 'Introduction.pptx', size: '3.5 MB' }
       ]
     },
     {
-      module: 'Module 2: Variables and Data Types',
+      module: 'Module 2: Basic Concepts',
       items: []
     }
-  ];
-
-  const requirements = [
-    { type: 'Forum', title: 'Discussion: Why Computer Science?', due: 'Sep 9, 2023 7:59 AM', status: 'Not Started', points: '25 pts' },
-    { type: 'Quiz', title: 'Quiz #1: Introduction to Programming', due: 'Sep 11, 2023 7:59 AM', status: 'Not Started', points: '50 pts' },
-    { type: 'Assignment', title: 'Assignment #1: Programming Basics', due: 'Sep 16, 2023 7:59 AM', status: 'Not Submitted', points: '100 pts' },
-    { type: 'Activity', title: 'Group Project: Algorithm Design', due: 'Sep 20, 2023 7:59 AM', status: 'Not Started', points: '150 pts' }
   ];
 
   // Group requirements by type
@@ -64,7 +108,33 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     if (!acc[key]) acc[key] = [];
     acc[key].push(req);
     return acc;
-  }, {} as Record<string, typeof requirements>);
+  }, {} as Record<string, Requirement[]>);
+
+  // Add this constant at the top level of your component
+  const REQUIREMENT_TYPES = [
+    { key: 'FORUMS', label: 'FORUMS', icon: <MessageSquare className="w-5 h-5" /> },
+    { key: 'QUIZZES', label: 'QUIZZES', icon: <HelpCircle className="w-5 h-5" /> },
+    { key: 'ASSIGNMENTS', label: 'ASSIGNMENTS', icon: <FileText className="w-5 h-5" /> },
+    { key: 'ACTIVITIES', label: 'ACTIVITIES', icon: <Users className="w-5 h-5" /> }
+  ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2 mb-8"></div>
+            <div className="space-y-4">
+              <div className="h-32 bg-gray-200 rounded"></div>
+              <div className="h-32 bg-gray-200 rounded"></div>
+              <div className="h-32 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-0 md:p-6">
@@ -74,13 +144,12 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
           <div className="bg-[#800000]/10 rounded-full p-3 mb-2">
             <UserCircle2 className="text-[#800000] w-12 h-12" />
           </div>
-          <span className="bg-pink-200 text-[#800000] px-3 py-1 rounded font-bold text-sm tracking-widest shadow-sm mb-1">{courseId}</span>
+          <span className="bg-pink-200 text-[#800000] px-3 py-1 rounded font-bold text-sm tracking-widest shadow-sm mb-1">{subjectInstance?.subject.code}</span>
         </div>
         <div className="flex-1">
-          <h2 className="text-3xl font-extrabold text-gray-900 mb-1 leading-tight">{courseInfo.title}</h2>
+          <h2 className="text-3xl font-extrabold text-gray-900 mb-1 leading-tight">{subjectInstance?.subject.name}</h2>
           <div className="flex flex-wrap items-center gap-4 text-base text-gray-700 mt-1">
-            <span className="flex items-center gap-1"><UserCircle2 className="w-5 h-5 text-[#800000]" /> {courseInfo.professor}</span>
-            <span className="flex items-center gap-1"><CalendarDays className="w-5 h-5 text-[#800000]" /> {courseInfo.schedule}</span>
+            <span className="flex items-center gap-1"><UserCircle2 className="w-5 h-5 text-[#800000]" /> {subjectInstance?.teacherName}</span>
           </div>
         </div>
       </div>
@@ -175,28 +244,25 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                         <tr key={i} className="hover:bg-pink-50/50 transition-colors duration-150">
                           <td className="p-4 text-gray-800 font-medium">
                             <div className="flex items-center gap-2">
-                              {req.type === 'Forum' && <MessageSquare className="w-4 h-4 text-blue-500" />}
-                              {req.type === 'Quiz' && <HelpCircle className="w-4 h-4 text-purple-500" />}
-                              {req.type === 'Assignment' && <FileText className="w-4 h-4 text-orange-500" />}
-                              {req.type === 'Activity' && <Users className="w-4 h-4 text-green-500" />}
+                              {REQUIREMENT_TYPES.find(t => t.key === req.type.toUpperCase())?.icon}
                               <span className="line-clamp-2">{req.title}</span>
                             </div>
                           </td>
                           <td className="p-4 text-gray-600">
                             <div className="flex items-center gap-2">
                               <Calendar className="w-4 h-4 text-gray-400" />
-                              {req.due}
+                              {req.deadline.toLocaleDateString()}
                             </div>
                           </td>
                           <td className="p-4">
                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium
-                              ${req.status === 'Not Started' ? 'bg-yellow-100 text-yellow-800' : 
-                                req.status === 'Not Submitted' ? 'bg-red-100 text-red-700' : 
-                                'bg-green-100 text-green-700'}`}>
-                              {req.status}
+                              ${req.scoreBase === 0 ? 'bg-yellow-100 text-yellow-800' : 
+                                req.scoreBase === 1 ? 'bg-green-100 text-green-700' : 
+                                'bg-red-100 text-red-700'}`}>
+                              {req.scoreBase === 0 ? 'Not Started' : req.scoreBase === 1 ? 'Completed' : 'Not Completed'}
                             </span>
                           </td>
-                          <td className="p-4 text-gray-600 font-medium">{req.points}</td>
+                          <td className="p-4 text-gray-600 font-medium">{req.scoreBase === 0 ? '0' : req.scoreBase === 1 ? '100' : '0'}</td>
                           <td className="p-4">
                             <div className="flex items-center gap-2">
                               <button className="px-3 py-1.5 rounded-md bg-[#800000] text-white text-xs font-semibold shadow-sm hover:bg-[#a52a2a] transition-colors duration-200 flex items-center gap-1">

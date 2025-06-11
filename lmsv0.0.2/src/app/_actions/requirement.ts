@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { auth } from '@clerk/nextjs/server';
 
 export interface CreateRequirementData {
   requirementNumber: number;
@@ -15,6 +16,12 @@ export interface CreateRequirementData {
 
 export async function createRequirement(data: CreateRequirementData) {
   try {
+    const { userId } = await auth();
+    
+    if (!userId) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
     // Validate the data
     if (!data.requirementNumber || !data.title || !data.scoreBase || !data.deadline || !data.type || !data.subjectInstanceId) {
       throw new Error('Missing required fields');
@@ -38,7 +45,8 @@ export async function createRequirement(data: CreateRequirementData) {
         scoreBase: data.scoreBase,
         deadline: data.deadline,
         type: data.type,
-        subjectInstanceId: data.subjectInstanceId
+        subjectInstanceId: data.subjectInstanceId,
+        createdById: userId
       }
     });
 

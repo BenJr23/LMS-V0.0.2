@@ -49,29 +49,40 @@ export default function TeachingSectionsPage() {
 
   const fetchSubjectInstances = async () => {
     try {
-      const instancesData = await getSubjectInstances();
-      setSubjectInstances(instancesData || []);
+      const response = await getSubjectInstances();
+      if (response.success && response.data) {
+        setSubjectInstances(response.data);
+      } else {
+        toast.error(response.error || 'Failed to load subject instances');
+        setSubjectInstances([]);
+      }
     } catch (error) {
       console.error('Failed to fetch subject instances:', error);
       toast.error('Failed to load subject instances');
+      setSubjectInstances([]);
     }
   };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [subjectsData, instancesData] = await Promise.all([
+        const [subjectsResponse, instancesResponse] = await Promise.all([
           getSubjects(),
           getSubjectInstances()
         ]);
         
-        if (!subjectsData) {
-          toast.error('Failed to load subjects');
-          return;
+        if (subjectsResponse.success && subjectsResponse.data) {
+          setSubjects(subjectsResponse.data);
+        } else {
+          toast.error(subjectsResponse.error || 'Failed to load subjects');
         }
         
-        setSubjects(subjectsData);
-        setSubjectInstances(instancesData || []);
+        if (instancesResponse.success && instancesResponse.data) {
+          setSubjectInstances(instancesResponse.data);
+        } else {
+          toast.error(instancesResponse.error || 'Failed to load subject instances');
+          setSubjectInstances([]);
+        }
       } catch (error) {
         console.error('Failed to fetch data:', error);
         toast.error('Failed to load data');

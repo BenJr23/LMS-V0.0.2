@@ -3,13 +3,14 @@
 import { useEffect, useState } from 'react';
 import { Eye, Edit, Trash2, Plus } from 'lucide-react';
 import { getSubjects, createSubject, deleteSubject } from '@/app/_actions/subject';
+import toast from 'react-hot-toast';
 
 type Subject = {
   id: string;
   name: string;
   code: string;
   createdById: string;
-  createdAt: string;
+  createdAt: Date;
 };
 
 export default function AdminSubjectPage() {
@@ -24,10 +25,17 @@ export default function AdminSubjectPage() {
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
-        const data = await getSubjects();
-        setSubjects(data);
+        const response = await getSubjects();
+        if (response.success && response.data) {
+          setSubjects(response.data);
+        } else {
+          toast.error(response.error || 'Failed to fetch subjects');
+          setSubjects([]);
+        }
       } catch (error) {
         console.error('Failed to fetch subjects:', error);
+        toast.error('Failed to fetch subjects');
+        setSubjects([]);
       }
     };
 
@@ -40,14 +48,19 @@ export default function AdminSubjectPage() {
     formData.append('code', newCode);
 
     try {
-      const newSubject = await createSubject(formData);
-      setSubjects(prev => [...prev, newSubject]);
-      setNewName('');
-      setNewCode('');
-      setIsModalOpen(false);
+      const response = await createSubject(formData);
+      if (response.success && response.data) {
+        setSubjects(prev => [...prev, response.data]);
+        setNewName('');
+        setNewCode('');
+        setIsModalOpen(false);
+        toast.success('Subject created successfully');
+      } else {
+        toast.error(response.error || 'Failed to create subject');
+      }
     } catch (error) {
-      alert('Failed to add subject');
-      console.error(error);
+      console.error('Failed to create subject:', error);
+      toast.error('Failed to create subject');
     }
   };
 
@@ -60,13 +73,18 @@ export default function AdminSubjectPage() {
     if (!subjectToDelete) return;
 
     try {
-      await deleteSubject(subjectToDelete.id);
-      setSubjects(prev => prev.filter(sub => sub.id !== subjectToDelete.id));
-      setIsDeleteModalOpen(false);
-      setSubjectToDelete(null);
+      const response = await deleteSubject(subjectToDelete.id);
+      if (response.success && response.data) {
+        setSubjects(prev => prev.filter(sub => sub.id !== subjectToDelete.id));
+        setIsDeleteModalOpen(false);
+        setSubjectToDelete(null);
+        toast.success('Subject deleted successfully');
+      } else {
+        toast.error(response.error || 'Failed to delete subject');
+      }
     } catch (error) {
       console.error('Failed to delete subject:', error);
-      alert('Failed to delete subject');
+      toast.error('Failed to delete subject');
     }
   };
 
@@ -76,7 +94,6 @@ export default function AdminSubjectPage() {
   );
 
   return (
-
     <div className="min-h-screen bg-gray-50 p-6">
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
@@ -130,7 +147,6 @@ export default function AdminSubjectPage() {
           </div>
         </div>
       )}
-
 
       {isDeleteModalOpen && subjectToDelete && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
@@ -198,7 +214,7 @@ export default function AdminSubjectPage() {
                     <td className="px-6 py-4 text-gray-800 font-medium">{subject.name}</td>
                     <td className="px-6 py-4 text-gray-600">{subject.code}</td>
                     <td className="px-6 py-4 text-gray-600">{subject.createdById}</td>
-                    <td className="px-6 py-4 text-gray-600">{new Date(subject.createdAt).toLocaleString()}</td>
+                    <td className="px-6 py-4 text-gray-600">{subject.createdAt.toLocaleString()}</td>
                     <td className="px-6 py-4">
                       <div className="flex justify-center gap-3">
                         <button className="p-2 text-gray-600 hover:text-[#800000] hover:bg-red-50 rounded-lg transition">
