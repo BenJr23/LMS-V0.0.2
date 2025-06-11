@@ -3,8 +3,10 @@
 import { useState, useEffect, use } from 'react';
 import { Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2, Settings, MessageSquare, HelpCircle, Users, Eye, MoreVertical, Calendar, Plus } from 'lucide-react';
 import { getSubjectInstance, updateSubjectInstance } from '@/app/_actions/subjectInstance';
+import { getRequirements } from '@/app/_actions/requirement';
 import toast from 'react-hot-toast';
 import RichTextEditor from '@/components/RichTextEditor';
+import { createRequirement } from '@/app/_actions/requirement';
 
 interface SubjectInstance {
   id: string;
@@ -21,6 +23,19 @@ interface SubjectInstance {
   };
 }
 
+interface Requirement {
+  id: string;
+  requirementNumber: number;
+  title: string | null;
+  content: string | null;
+  scoreBase: number;
+  deadline: Date;
+  type: string;
+  subjectInstanceId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export default function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const [activeTab, setActiveTab] = useState('announcements');
@@ -28,6 +43,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddAssignmentModalOpen, setIsAddAssignmentModalOpen] = useState(false);
+  const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [editForm, setEditForm] = useState({
     teacherName: '',
     grade: '',
@@ -35,7 +51,6 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     enrollment: 1
   });
   const [assignmentForm, setAssignmentForm] = useState({
-    requirementNumber: '',
     title: '',
     content: '',
     deadline: '',
@@ -43,20 +58,33 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     type: 'Assignment'
   });
 
-  useEffect(() => {
-    const fetchSubjectInstance = async () => {
-      try {
-        const data = await getSubjectInstance(resolvedParams.id);
-        setSubjectInstance(data);
-      } catch (error) {
-        console.error('Failed to fetch subject instance:', error);
-        toast.error('Failed to load course details');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchData = async () => {
+    try {
+      const [instanceData, requirementsData] = await Promise.all([
+        getSubjectInstance(resolvedParams.id),
+        getRequirements(resolvedParams.id)
+      ]);
 
-    fetchSubjectInstance();
+      if (instanceData) {
+        setSubjectInstance(instanceData);
+      }
+
+      if (requirementsData.success && requirementsData.data) {
+        setRequirements(requirementsData.data);
+      } else {
+        setRequirements([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+      toast.error('Failed to load course details');
+      setRequirements([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
   }, [resolvedParams.id]);
 
   const tabs = [
@@ -88,20 +116,13 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     }
   ];
 
-  const requirements = [
-    { type: 'Forum', title: 'Discussion: Course Introduction', due: 'Sep 9, 2023 7:59 AM', status: 'Not Started', points: '25 pts' },
-    { type: 'Quiz', title: 'Quiz #1: Basic Concepts', due: 'Sep 11, 2023 7:59 AM', status: 'Not Started', points: '50 pts' },
-    { type: 'Assignment', title: 'Assignment #1: Fundamentals', due: 'Sep 16, 2023 7:59 AM', status: 'Not Submitted', points: '100 pts' },
-    { type: 'Activity', title: 'Group Project: Course Concepts', due: 'Sep 20, 2023 7:59 AM', status: 'Not Started', points: '150 pts' }
-  ];
-
   // Group requirements by type
   const groupedRequirements = requirements.reduce((acc, req) => {
     const key = req.type.toUpperCase() + 'S';
     if (!acc[key]) acc[key] = [];
     acc[key].push(req);
     return acc;
-  }, {} as Record<string, typeof requirements>);
+  }, {} as Record<string, Requirement[]>);
 
   const handleOpenEditModal = () => {
     if (subjectInstance) {
@@ -134,7 +155,6 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     const formattedType = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
     
     setAssignmentForm({
-      requirementNumber: '',
       title: '',
       content: '',
       deadline: '',
@@ -146,24 +166,53 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
   const handleAddAssignment = async () => {
     try {
-      // TODO: Implement the API call to save the requirement
-      console.log('Saving requirement:', assignmentForm);
+      // Get the current requirements of the same type
+      const currentTypeRequirements = groupedRequirements[`${assignmentForm.type.toUpperCase()}S`] || [];
+      
+      // Calculate the next requirement number
+      const nextRequirementNumber = currentTypeRequirements.length + 1;
+
+      const result = await createRequirement({
+        requirementNumber: nextRequirementNumber,
+        title: assignmentForm.title,
+        content: assignmentForm.content,
+        scoreBase: parseInt(assignmentForm.baseScore),
+        deadline: new Date(assignmentForm.deadline),
+        type: assignmentForm.type as 'Forum' | 'Assignment' | 'Activity' | 'Quiz',
+        subjectInstanceId: resolvedParams.id
+      });
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
       setIsAddAssignmentModalOpen(false);
       toast.success(`${assignmentForm.type} created successfully`);
+      
       // Reset form
       setAssignmentForm({
-        requirementNumber: '',
         title: '',
         content: '',
         deadline: '',
         baseScore: '',
         type: 'Assignment'
       });
+
+      // Refresh the requirements data
+      await fetchData();
     } catch (error) {
       console.error('Failed to create requirement:', error);
-      toast.error('Failed to create requirement');
+      toast.error(error instanceof Error ? error.message : 'Failed to create requirement');
     }
   };
+
+  // Add this constant at the top level of your component
+  const REQUIREMENT_TYPES = [
+    { key: 'FORUMS', label: 'FORUMS', icon: <MessageSquare className="w-5 h-5" /> },
+    { key: 'QUIZZES', label: 'QUIZZES', icon: <HelpCircle className="w-5 h-5" /> },
+    { key: 'ASSIGNMENTS', label: 'ASSIGNMENTS', icon: <FileText className="w-5 h-5" /> },
+    { key: 'ACTIVITIES', label: 'ACTIVITIES', icon: <Users className="w-5 h-5" /> }
+  ];
 
   if (loading) {
     return (
@@ -312,25 +361,6 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
             </div>
 
             <div className="p-6 space-y-6 max-h-[calc(100vh-16rem)] overflow-y-auto">
-              {/* Number Section */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  {assignmentForm.type === 'Forum' ? 'Forum Number' :
-                   assignmentForm.type === 'Quiz' ? 'Quiz Number' :
-                   assignmentForm.type === 'Activity' ? 'Activity Number' :
-                   'Assignment Number'}
-                </label>
-                <input
-                  type="number"
-                  value={assignmentForm.requirementNumber}
-                  onChange={(e) => setAssignmentForm(prev => ({ ...prev, requirementNumber: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent text-gray-800 transition-all duration-200"
-                  placeholder={`Enter ${assignmentForm.type.toLowerCase()} number (e.g., 1, 2, 3)`}
-                  min="1"
-                  step="1"
-                />
-              </div>
-
               {/* Title Section */}
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
@@ -503,15 +533,15 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
       {/* Requirements Tab */}
       {activeTab === 'requirements' && (
         <div>
-          {Object.entries(groupedRequirements).map(([section, items]) => (
-            <div key={section} className="mb-8">
+          {REQUIREMENT_TYPES.map(({ key, label }) => (
+            <div key={key} className="mb-8">
               <div className="flex items-center gap-2 mb-3">
                 <h4 className="text-lg font-bold text-[#800000] uppercase tracking-wide flex items-center gap-2">
                   <ClipboardList className="w-5 h-5" />
-                  {section}
+                  {label}
                 </h4>
                 <button
-                  onClick={() => handleOpenAddModal(section.slice(0, -1))}
+                  onClick={() => handleOpenAddModal(key.slice(0, -1))}
                   className="p-1.5 rounded-md bg-[#800000] text-white hover:bg-[#a52a2a] transition-colors duration-200 shadow-sm"
                 >
                   <Plus className="w-4 h-4" />
@@ -522,53 +552,65 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                   <table className="min-w-full text-sm">
                     <thead>
                       <tr className="bg-pink-50 border-b border-pink-100">
-                        <th className="p-4 text-left font-semibold text-[#800000] w-[35%]">Title</th>
+                        <th className="p-4 text-left font-semibold text-[#800000] w-[15%]">Requirement</th>
+                        <th className="p-4 text-left font-semibold text-[#800000] w-[30%]">Title</th>
                         <th className="p-4 text-left font-semibold text-[#800000] w-[20%]">Due Date</th>
-                        <th className="p-4 text-left font-semibold text-[#800000] w-[15%]">Status</th>
-                        <th className="p-4 text-left font-semibold text-[#800000] w-[10%]">Points</th>
+                        <th className="p-4 text-left font-semibold text-[#800000] w-[15%]">Points</th>
                         <th className="p-4 text-left font-semibold text-[#800000] w-[20%]">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-pink-50">
-                      {items.map((req, i) => (
-                        <tr key={i} className="hover:bg-pink-50/50 transition-colors duration-150">
-                          <td className="p-4 text-gray-800 font-medium">
-                            <div className="flex items-center gap-2">
-                              {req.type === 'Forum' && <MessageSquare className="w-4 h-4 text-blue-500" />}
-                              {req.type === 'Quiz' && <HelpCircle className="w-4 h-4 text-purple-500" />}
-                              {req.type === 'Assignment' && <FileText className="w-4 h-4 text-orange-500" />}
-                              {req.type === 'Activity' && <Users className="w-4 h-4 text-green-500" />}
-                              <span className="line-clamp-2">{req.title}</span>
-                            </div>
-                          </td>
-                          <td className="p-4 text-gray-600">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-gray-400" />
-                              {req.due}
-                            </div>
-                          </td>
-                          <td className="p-4">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium
-                              ${req.status === 'Not Started' ? 'bg-yellow-100 text-yellow-800' :
-                                req.status === 'Not Submitted' ? 'bg-red-100 text-red-700' :
-                                  'bg-green-100 text-green-700'}`}>
-                              {req.status}
-                            </span>
-                          </td>
-                          <td className="p-4 text-gray-600 font-medium">{req.points}</td>
-                          <td className="p-4">
-                            <div className="flex items-center gap-2">
-                              <button className="px-3 py-1.5 rounded-md bg-[#800000] text-white text-xs font-semibold shadow-sm hover:bg-[#a52a2a] transition-colors duration-200 flex items-center gap-1">
-                                <Eye className="w-3.5 h-3.5" />
-                                View
-                              </button>
-                              <button className="p-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors duration-200">
-                                <MoreVertical className="w-4 h-4" />
-                              </button>
-                            </div>
+                      {groupedRequirements[key]?.length > 0 ? (
+                        groupedRequirements[key].map((req) => (
+                          <tr key={req.id} className="hover:bg-pink-50/50 transition-colors duration-150">
+                            <td className="p-4 text-gray-800 font-medium">
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium bg-pink-100 text-[#800000]">
+                                {req.type}# {req.requirementNumber}
+                              </span>
+                            </td>
+                            <td className="p-4 text-gray-800 font-medium">
+                              <div className="flex items-center gap-2">
+                                {req.type === 'Forum' && <MessageSquare className="w-4 h-4 text-blue-500" />}
+                                {req.type === 'Quiz' && <HelpCircle className="w-4 h-4 text-purple-500" />}
+                                {req.type === 'Assignment' && <FileText className="w-4 h-4 text-orange-500" />}
+                                {req.type === 'Activity' && <Users className="w-4 h-4 text-green-500" />}
+                                <span className="line-clamp-2">{req.title}</span>
+                              </div>
+                            </td>
+                            <td className="p-4 text-gray-600">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-gray-400" />
+                                {new Date(req.deadline).toLocaleString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                  hour: 'numeric',
+                                  minute: 'numeric',
+                                  hour12: true
+                                })}
+                              </div>
+                            </td>
+                            <td className="p-4 text-gray-600 font-medium">{req.scoreBase} pts</td>
+                            <td className="p-4">
+                              <div className="flex items-center gap-2">
+                                <button className="px-3 py-1.5 rounded-md bg-[#800000] text-white text-xs font-semibold shadow-sm hover:bg-[#a52a2a] transition-colors duration-200 flex items-center gap-1">
+                                  <Eye className="w-3.5 h-3.5" />
+                                  View
+                                </button>
+                                <button className="p-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors duration-200">
+                                  <MoreVertical className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={5} className="p-4 text-center text-gray-500 italic">
+                            No {label.toLowerCase()} available yet. Click the + button to add one.
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
