@@ -21,43 +21,43 @@ model Subject {
   code        String             @unique
   createdById String             // Clerk userId
   createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
-  instances   SubjectInstance[]  // One-to-many relationship
+  // Relations
+  instances   SubjectInstance[]
 }
 
 model SubjectInstance {
-  id           String   @id @default(cuid())
-  teacherName  String
-  grade        String
-  section      String
-  enrollment   Int      // 0 = Inactive, 1 = Active
-  enrolmentCode  Int      // NEW FIELD
-  icon         String   // Image path
-  subjectId    String
-  createdById  String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String        @id @default(cuid())
+  teacherName   String
+  grade         String
+  section       String
+  enrollment    Int           // 0 = Inactive, 1 = Active
+  enrolmentCode Int
+  icon          String        // Image path
+  subjectId     String
+  createdById   String        // Clerk userId
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   // Relations
-  subject      Subject  @relation(fields: [subjectId], references: [id])
-
-  instances   Requirement[]  // One-to-many relationship
+  subject       Subject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  requirements  Requirement[]
 }
 
-
 model Requirement {
-  id               String   @id @default(cuid())
+  id                String          @id @default(cuid())
   requirementNumber Int
-  title            String?     // Optional
-  content          String?     // Optional (e.g., for Forum instructions)
+  title            String?
+  content          String?
   scoreBase        Int
   deadline         DateTime
-  type             String      // e.g., "Forum", "Assignment", "Activity", "Quiz"
+  type             String          // "Forum", "Assignment", "Activity", "Quiz"
   subjectInstanceId String
-
-  createdAt        DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdById      String          // Clerk userId
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
   // Relations
-  subjectInstance  SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
+  subjectInstance  SubjectInstance @relation(fields: [subjectInstanceId], references: [id], onDelete: Cascade)
 }
