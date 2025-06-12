@@ -6,12 +6,6 @@ const isPublicRoute = createRouteMatcher([
   '/api/fetch-roles',
 ]);
 
-// Define role-based route access with exact paths
-const roleBasedRoutes = {
-  admin: ['/admin-dashboard'],
-  faculty: ['/faculty-dashboard'],
-};
-
 interface SessionClaims {
   privateMetadata?: {
     role?: string;
@@ -32,26 +26,23 @@ export default clerkMiddleware(async (auth, req) => {
   if (isAuthenticated && sessionClaims) {
     const userRole = (sessionClaims as SessionClaims).privateMetadata?.role;
 
-    // Check if the current path is a dashboard route
-    const isDashboardRoute = currentPath === '/admin-dashboard' || 
-                           currentPath === '/faculty-dashboard';
+    // Check if the current path is under admin or faculty routes
+    const isAdminRoute = currentPath.startsWith('/admin/');
+    const isFacultyRoute = currentPath.startsWith('/faculty/');
 
-    if (isDashboardRoute) {
+    if (isAdminRoute || isFacultyRoute) {
       // If user has no role, redirect to unauthorized
       if (!userRole) {
         return NextResponse.redirect(new URL('/unauthorized', req.url));
       }
 
       // Check if user's role has access to the current route
-      const allowedRoutes = roleBasedRoutes[userRole as keyof typeof roleBasedRoutes] || [];
-      const hasAccess = allowedRoutes.includes(currentPath);
+      const hasAccess = (userRole === 'admin' && isAdminRoute) || 
+                       (userRole === 'faculty' && isFacultyRoute);
 
       if (!hasAccess) {
         return NextResponse.redirect(new URL('/unauthorized', req.url));
       }
-    } else if (currentPath.startsWith('/admin-dashboard') || currentPath.startsWith('/faculty-dashboard')) {
-      // Handle non-existent dashboard paths
-      return NextResponse.redirect(new URL('/unauthorized', req.url));
     }
   }
 
