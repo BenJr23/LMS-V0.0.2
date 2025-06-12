@@ -128,7 +128,7 @@ export default function Home() {
           <div className="text-center mb-8">
             <Image src="/favicon.ico" alt="Favicon" width={120} height={120} className="mx-auto mb-2" />
             <h2 className="text-3xl font-bold text-red-800 mb-1">SJSFI</h2>
-            <p className="text-sm text-gray-600 mb-2">AI POWERED LMS</p>
+            <p className="text-sm text-gray-600 mb-2">AI-POWERED</p>
             <h1 className="text-2xl font-bold text-red-800">Learning Management System</h1>
             <p className="text-gray-600 text-sm">Sign in to access your account</p>
           </div>
