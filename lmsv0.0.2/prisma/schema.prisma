@@ -41,10 +41,9 @@ model SubjectInstance {
 
   // Relations
   subject      Subject  @relation(fields: [subjectId], references: [id])
-
   instances   Requirement[]  // One-to-many relationship
+  enrolments  Enrolment[]    // One-to-many relationship with Enrolment
 }
-
 
 model Requirement {
   id               String   @id @default(cuid())
@@ -61,4 +60,19 @@ model Requirement {
 
   // Relations
   subjectInstance  SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
+}
+
+model Enrolment {
+  id                String   @id @default(cuid())
+  userId           String   // Clerk userId
+  subjectInstanceId String
+  code             Int      // Enrolment code (matches enrolmentCode in SubjectInstance)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  subjectInstance  SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
+
+  // Add unique constraint to prevent duplicate enrolments
+  @@unique([userId, subjectInstanceId])
 }
