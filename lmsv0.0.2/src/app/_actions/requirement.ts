@@ -53,8 +53,8 @@ export async function createRequirement(data: CreateRequirementData) {
     });
 
     // Revalidate the course page to show the new requirement
-    revalidatePath(`/faculty-dashboard/${data.subjectInstanceId}`);
-    revalidatePath(`/student-dashboard/${data.subjectInstanceId}`);
+    revalidatePath(`/faculty/faculty-dashboard/${data.subjectInstanceId}`);
+    revalidatePath(`/student/student-dashboard/${data.subjectInstanceId}`);
 
     return { success: true, data: requirement };
   } catch (error) {
@@ -91,8 +91,8 @@ export async function updateRequirement(id: string, data: Partial<CreateRequirem
     });
 
     // Revalidate the course page to show the updated requirement
-    revalidatePath(`/faculty-dashboard/${requirement.subjectInstanceId}`);
-    revalidatePath(`/student-dashboard/${requirement.subjectInstanceId}`);
+    revalidatePath(`/faculty/faculty-dashboard/${requirement.subjectInstanceId}`);
+    revalidatePath(`/student/student-dashboard/${requirement.subjectInstanceId}`);
 
     return { success: true, data: requirement };
   } catch (error) {
@@ -108,8 +108,8 @@ export async function deleteRequirement(id: string) {
     });
 
     // Revalidate the course page to remove the deleted requirement
-    revalidatePath(`/faculty-dashboard/${requirement.subjectInstanceId}`);
-    revalidatePath(`/student-dashboard/${requirement.subjectInstanceId}`);
+    revalidatePath(`/faculty/faculty-dashboard/${requirement.subjectInstanceId}`);
+    revalidatePath(`/student/student-dashboard/${requirement.subjectInstanceId}`);
 
     return { success: true };
   } catch (error) {
