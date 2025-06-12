@@ -46,6 +46,15 @@ export async function setUserRole(role: string): Promise<SetResult> {
 
         try {
             const client = await clerkClient();
+            console.log('🔑 Clerk client initialized, updating user metadata...');
+
+            // Get current user metadata before update
+            const currentUserData = await client.users.getUser(userId);
+            console.log('📋 Current user metadata:', {
+                userId,
+                currentRole: currentUserData.privateMetadata?.role,
+                metadata: currentUserData.privateMetadata
+            });
 
             // Update Clerk private metadata with role
             await client.users.updateUserMetadata(userId, {
@@ -54,7 +63,16 @@ export async function setUserRole(role: string): Promise<SetResult> {
                 },
             });
 
-            console.log('✅ User role updated successfully:', { userId, role: normalizedRole });
+            // Verify the update was successful
+            const updatedUserData = await client.users.getUser(userId);
+            console.log('✅ Role update verification:', {
+                userId,
+                requestedRole: normalizedRole,
+                actualRole: updatedUserData.privateMetadata?.role,
+                metadata: updatedUserData.privateMetadata,
+                updateSuccessful: updatedUserData.privateMetadata?.role === normalizedRole
+            });
+
             return { 
                 success: true,
                 redirectUrl: normalizedRole === 'admin' ? '/admin/admin-dashboard' : '/faculty/faculty-dashboard'
