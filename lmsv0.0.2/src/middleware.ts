@@ -8,8 +8,8 @@ const isPublicRoute = createRouteMatcher([
 
 // Define role-based route access
 const roleBasedRoutes = {
-  admin: ['/admin-dashboard'],
-  faculty: ['/faculty-dashboard'],
+  admin: ['/admin/'],
+  faculty: ['/faculty/'],
 };
 
 interface SessionClaims {
