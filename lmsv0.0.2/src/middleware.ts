@@ -6,7 +6,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/fetch-roles',
 ]);
 
-// Define role-based route access
+// Define role-based route access with exact paths
 const roleBasedRoutes = {
   admin: ['/admin-dashboard'],
   faculty: ['/faculty-dashboard'],
@@ -21,6 +21,7 @@ interface SessionClaims {
 export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims } = await auth();
   const isAuthenticated = !!userId;
+  const currentPath = req.nextUrl.pathname;
 
   // Block access to private routes if not authenticated
   if (!isPublicRoute(req) && !isAuthenticated) {
@@ -30,11 +31,10 @@ export default clerkMiddleware(async (auth, req) => {
   // If authenticated, check role-based access
   if (isAuthenticated && sessionClaims) {
     const userRole = (sessionClaims as SessionClaims).privateMetadata?.role;
-    const currentPath = req.nextUrl.pathname;
 
     // Check if the current path is a dashboard route
-    const isDashboardRoute = currentPath.startsWith('/admin-dashboard') || 
-                           currentPath.startsWith('/faculty-dashboard');
+    const isDashboardRoute = currentPath === '/admin-dashboard' || 
+                           currentPath === '/faculty-dashboard';
 
     if (isDashboardRoute) {
       // If user has no role, redirect to unauthorized
@@ -44,11 +44,14 @@ export default clerkMiddleware(async (auth, req) => {
 
       // Check if user's role has access to the current route
       const allowedRoutes = roleBasedRoutes[userRole as keyof typeof roleBasedRoutes] || [];
-      const hasAccess = allowedRoutes.some(route => currentPath.startsWith(route));
+      const hasAccess = allowedRoutes.includes(currentPath);
 
       if (!hasAccess) {
         return NextResponse.redirect(new URL('/unauthorized', req.url));
       }
+    } else if (currentPath.startsWith('/admin-dashboard') || currentPath.startsWith('/faculty-dashboard')) {
+      // Handle non-existent dashboard paths
+      return NextResponse.redirect(new URL('/unauthorized', req.url));
     }
   }
 
