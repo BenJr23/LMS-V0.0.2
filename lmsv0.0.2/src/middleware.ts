@@ -8,6 +8,8 @@ const clerkClient = createClerkClient({
 
 const isPublicRoute = createRouteMatcher([
   '/',
+  '/student-login',
+  '/faculty-login',
   '/api/fetch-roles',
 ]);
 

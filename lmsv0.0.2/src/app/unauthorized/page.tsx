@@ -28,10 +28,10 @@ export default function Unauthorized() {
           
           <div className="space-y-4">
             <button
-              onClick={() => router.push('/')}
+              onClick={() => router.back()}
               className="w-full py-2 px-4 bg-red-700 text-white rounded-md hover:bg-red-800 transition-colors"
             >
-              Return to Login
+              GO BACK
             </button>
 
             <button
