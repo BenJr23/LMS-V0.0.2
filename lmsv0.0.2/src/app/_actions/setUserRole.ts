@@ -75,7 +75,7 @@ export async function setUserRole(role: string): Promise<SetResult> {
 
             return { 
                 success: true,
-                redirectUrl: normalizedRole === 'admin' ? '/admin/admin-dashboard' : '/faculty/faculty-dashboard'
+                redirectUrl: normalizedRole === 'admin' ? '/admin/dashboard' : '/faculty/dashboard'
             };
         } catch (clerkError) {
             console.error('💥 Clerk client or update error:', clerkError);

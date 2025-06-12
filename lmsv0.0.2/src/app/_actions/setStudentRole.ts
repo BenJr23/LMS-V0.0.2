@@ -63,7 +63,7 @@ export async function setStudentRole(studentData: {
 
             return {
                 success: true,
-                redirectUrl: '/student/student-dashboard'
+                redirectUrl: '/student/dashboard'
             };
 
         } catch (clerkError) {
