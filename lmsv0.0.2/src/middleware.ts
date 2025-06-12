@@ -12,6 +12,7 @@ interface SessionClaims {
   };
 }
 
+// restarting functions
 export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims } = await auth();
   const isAuthenticated = !!userId;
