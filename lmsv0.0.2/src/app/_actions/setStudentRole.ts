@@ -43,22 +43,25 @@ export async function setStudentRole(studentData: {
                 metadata: currentUserData.privateMetadata
             });
 
-            // Always assign role: student
-            await client.users.updateUserMetadata(userId, {
+            // Update both private and public metadata with exact field names
+            await client.users.updateUser(userId, {
                 privateMetadata: {
-                    role: 'student',
+                    role: 'student' // Keep role private for security
+                },
+                publicMetadata: {
                     full_name: studentData.full_name,
                     email: studentData.email,
                     grade_level: studentData.grade_level,
-                    enrollment_status: studentData.enrollment_status,
-                    status: studentData.status
-                },
+                    enrollment_status: studentData.enrollment_status || 'enrolled',
+                    status: studentData.status || 'active'
+                }
             });
 
             const updatedUserData = await client.users.getUser(userId);
             console.log('✅ Student metadata updated successfully:', {
                 userId,
-                updatedMetadata: updatedUserData.privateMetadata
+                privateMetadata: updatedUserData.privateMetadata,
+                publicMetadata: updatedUserData.publicMetadata
             });
 
             return {
