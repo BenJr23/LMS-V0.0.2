@@ -10,6 +10,7 @@ interface EnrolmentModalProps {
   onClose: () => void;
   subjectInstanceId: string;
   subjectName: string;
+  onSuccess?: () => void;
 }
 
 export default function EnrolmentModal({
@@ -17,6 +18,7 @@ export default function EnrolmentModal({
   onClose,
   subjectInstanceId,
   subjectName,
+  onSuccess,
 }: EnrolmentModalProps) {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
@@ -45,6 +47,9 @@ export default function EnrolmentModal({
         throw new Error(result.error || 'Failed to enroll');
       }
 
+      // Call onSuccess callback if provided
+      onSuccess?.();
+      
       // Close modal and refresh the page
       onClose();
       router.refresh();

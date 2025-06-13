@@ -6,6 +6,7 @@ import { getAvailableSubjects } from '@/app/_actions/availableSubjects';
 import { getImageUrl } from '@/app/_actions/uploadIcon';
 import { Users } from 'lucide-react';
 import EnrolmentModal from './EnrolmentModal';
+import { toast } from 'react-hot-toast';
 
 interface SubjectInstance {
   id: string;
@@ -36,24 +37,24 @@ export default function SubjectsPage() {
 
   const gradeOptions = ['all', '7', '8', '9', '10'];
 
-  useEffect(() => {
-    const fetchSubjects = async () => {
-      try {
-        const result = await getAvailableSubjects();
-        if (result.success && result.data) {
-          setAvailableSubjects(result.data);
-          setFilteredSubjects(result.data);
-        } else {
-          setError(result.error || 'Failed to fetch subjects');
-        }
-      } catch (error) {
-        console.error('Failed to fetch subject instances:', error);
-        setError('An error occurred while fetching subjects');
-      } finally {
-        setIsLoading(false);
+  const fetchSubjects = async () => {
+    try {
+      const result = await getAvailableSubjects();
+      if (result.success && result.data) {
+        setAvailableSubjects(result.data);
+        setFilteredSubjects(result.data);
+      } else {
+        setError(result.error || 'Failed to fetch subjects');
       }
-    };
+    } catch (error) {
+      console.error('Failed to fetch subject instances:', error);
+      setError('An error occurred while fetching subjects');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchSubjects();
   }, []);
 
@@ -262,6 +263,13 @@ export default function SubjectsPage() {
           }}
           subjectInstanceId={selectedSubject.id}
           subjectName={selectedSubject.subject.name}
+          onSuccess={() => {
+            toast.success('Successfully enrolled in the subject!');
+            setIsModalOpen(false);
+            setSelectedSubject(null);
+            // Refetch subjects after successful enrollment
+            fetchSubjects();
+          }}
         />
       )}
     </>

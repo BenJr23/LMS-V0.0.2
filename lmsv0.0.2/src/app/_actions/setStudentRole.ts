@@ -52,8 +52,8 @@ export async function setStudentRole(studentData: {
                     full_name: studentData.full_name,
                     email: studentData.email,
                     grade_level: studentData.grade_level,
-                    enrollment_status: studentData.enrollment_status || 'enrolled',
-                    status: studentData.status || 'active'
+                    enrollment_status: studentData.enrollment_status,
+                    status: studentData.status 
                 }
             });
 
