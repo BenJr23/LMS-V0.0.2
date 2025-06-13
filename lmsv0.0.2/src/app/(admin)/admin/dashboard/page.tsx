@@ -29,10 +29,6 @@ export default function AdminSubjectPage() {
         const result = await getSubjects();
         
         if (!result.success) {
-          if (result.error === 'Unauthorized') {
-            // Let the middleware handle unauthorized access
-            return;
-          }
           toast.error(result.error || 'Failed to fetch subjects');
           return;
         }
