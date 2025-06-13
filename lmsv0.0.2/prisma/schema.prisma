@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
@@ -16,68 +10,130 @@ datasource db {
 }
 
 model Subject {
-  id          String             @id @default(cuid())
+  id          String            @id @default(cuid())
   name        String
-  code        String             @unique
-  createdById String             // Clerk userId
-  createdAt   DateTime           @default(now())
+  code        String            @unique
+  createdById String            // Clerk userId
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 
   instances   SubjectInstance[]  // One-to-many relationship
-  updatedAt   DateTime @updatedAt
 }
 
 model SubjectInstance {
-  id           String   @id @default(cuid())
-  teacherName  String
-  grade        String
-  section      String
-  enrollment   Int      // 0 = Inactive, 1 = Active
-  enrolmentCode  Int      // NEW FIELD
-  icon         String   // Image path
-  subjectId    String
-  createdById  String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String            @id @default(cuid())
+  teacherName    String
+  grade          String
+  section        String
+  enrollment     Int               // 0 = Inactive, 1 = Active
+  enrolmentCode  Int
+  icon           String
+  subjectId      String
+  createdById    String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
-  // Relations
-  subject      Subject  @relation(fields: [subjectId], references: [id])
-  instances   Requirement[]  // One-to-many relationship
-  enrolments  Enrolment[]    // One-to-many relationship with Enrolment
+  subject        Subject           @relation(fields: [subjectId], references: [id])
+  requirements   Requirement[]     // ✅ Renamed to keep naming consistency
+  enrolments     Enrolment[]
+  announcements  Announcement[]
+  moduleFolders  ModuleFolder[]
+  uploadedContents UploadedContent[]
 }
 
 model Requirement {
-  id               String   @id @default(cuid())
+  id               String       @id @default(cuid())
   requirementNumber Int
-  title            String?     // Optional
-  content          String?     // Optional (e.g., for Forum instructions)
+  title            String?
+  content          String?
   scoreBase        Int
   deadline         DateTime
-  type             String      // e.g., "Forum", "Assignment", "Activity", "Quiz"
+  type             String
   subjectInstanceId String
-  createdById      String      // Clerk userId
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdById      String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
-  // Relations
   subjectInstance  SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
+  submissions      Submission[]
 }
 
 model Enrolment {
-  id                String   @id @default(cuid())
-  userId           String   // Clerk userId
+  id                String    @id @default(cuid())
+  userId            String    // Clerk userId
   subjectInstanceId String
-  code             Int      // Enrolment code (matches enrolmentCode in SubjectInstance)
-  fullName         String   // Student's full name
-  email            String   // Student's email
-  gradeLevel       String   // Student's grade level
-  enrollmentStatus String   // Student's enrollment status
-  status           String   // Student's status
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  code              Int
+  fullName          String
+  email             String
+  gradeLevel        String
+  enrollmentStatus  String
+  status            String
+  hasNewContent     Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  // Relations
-  subjectInstance  SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
+  subjectInstance   SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
+  submissions       Submission[]
 
-  // Add unique constraint to prevent duplicate enrolments
   @@unique([userId, subjectInstanceId])
+}
+
+model Announcement {
+  id                String    @id @default(cuid())
+  subjectInstanceId String
+  userId            String
+
+  title             String
+  content           String
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  subjectInstance   SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
+}
+
+model ModuleFolder {
+  id                String    @id @default(cuid())
+  subjectInstanceId String
+  userId            String
+  folderName        String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  subjectInstance   SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
+  uploadedContents  UploadedContent[]
+}
+
+model UploadedContent {
+  id                String    @id @default(cuid())
+  subjectInstanceId String
+  moduleFolderId    String
+  fileName          String
+  filePath          String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  subjectInstance   SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
+  moduleFolder      ModuleFolder    @relation(fields: [moduleFolderId], references: [id])
+}
+
+model Submission {
+  id            String   @id @default(cuid())
+  requirementId String
+  enrollmentId  String
+  userId        String
+
+  title         String?
+  content       String?
+  filePath      String?
+
+  graded        Boolean  @default(false)
+  score         Float?
+  feedback      String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  requirement   Requirement @relation(fields: [requirementId], references: [id])
+  enrollment    Enrolment    @relation(fields: [enrollmentId], references: [id])
 }
