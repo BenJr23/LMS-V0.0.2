@@ -413,7 +413,7 @@ export default function TeachingSectionsPage() {
           return (
             <div
               key={instance.id}
-              onClick={() => router.push(`/faculty/faculty-dashboard/${instance.id}`)}
+              onClick={() => router.push(`/faculty/dashboard/${instance.id}`)}
               className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 hover:scale-[1.02] transform cursor-pointer"
             >
               <div className="relative h-40 w-full">

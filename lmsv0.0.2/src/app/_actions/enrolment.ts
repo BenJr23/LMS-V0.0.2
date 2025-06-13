@@ -109,3 +109,43 @@ export async function createEnrolment(subjectInstanceId: string, code: number): 
     };
   }
 }
+
+export async function getEnrolledSubjects() {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return {
+        success: false,
+        error: 'Unauthorized: Please sign in to view enrolled subjects.'
+      };
+    }
+
+    const enrolments = await prisma.enrolment.findMany({
+      where: {
+        userId: userId
+      },
+      include: {
+        subjectInstance: {
+          include: {
+            subject: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    return {
+      success: true,
+      data: enrolments
+    };
+
+  } catch (error) {
+    console.error('Error in getEnrolledSubjects:', error);
+    return {
+      success: false,
+      error: 'An unexpected error occurred.'
+    };
+  }
+}

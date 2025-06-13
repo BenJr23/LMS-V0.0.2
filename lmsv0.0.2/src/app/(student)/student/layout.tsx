@@ -1,7 +1,6 @@
 "use client";
 import Link from 'next/link';
 import { ReactNode, useState, useRef, useEffect } from 'react';
-import { Bell } from 'lucide-react';
 import Image from 'next/image';
 import { useClerk } from '@clerk/nextjs';
 
@@ -58,7 +57,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <header className="absolute top-0 left-64 right-0 z-30 px-6 py-4 bg-white/80 shadow border-b border-gray-200 backdrop-blur-md flex justify-between items-center">
           <h1 className="text-xl font-semibold text-[#800000] tracking-wide">WELCOME USER</h1>
           <div className="flex items-center space-x-4">
-            <Bell className="text-[#800000]" />
             <StudentUserDropdown />
           </div>
         </header>
