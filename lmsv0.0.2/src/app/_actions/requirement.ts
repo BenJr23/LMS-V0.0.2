@@ -51,6 +51,15 @@ export async function createRequirement(data: CreateRequirementData) {
         createdById: userId
       }
     });
+    await prisma.enrolment.updateMany({
+      where: {
+        subjectInstanceId: data.subjectInstanceId,
+        hasNewContent: false // Only update enrollments that don't already have new content
+      },
+      data: {
+        hasNewContent: true
+      }
+    });
 
     // Revalidate the course page to show the new requirement
     revalidatePath(`/faculty/dashboard/${data.subjectInstanceId}`);

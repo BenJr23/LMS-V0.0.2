@@ -160,3 +160,28 @@ export async function getEnrolledSubjects() {
     };
   }
 }
+
+export async function updateEnrollmentNewContent(enrollmentId: string) {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    // Update the enrollment to set hasNewContent to false
+    await prisma.enrolment.update({
+      where: {
+        id: enrollmentId,
+        userId // Ensure the enrollment belongs to the current user
+      },
+      data: {
+        hasNewContent: false
+      }
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating enrollment new content status:', error);
+    return { success: false, error: 'Failed to update enrollment status' };
+  }
+}

@@ -2,13 +2,14 @@
 
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
-import { getEnrolledSubjects } from '@/app/_actions/enrolment';
+import { getEnrolledSubjects, updateEnrollmentNewContent } from '@/app/_actions/enrolment';
 import { getImageUrl } from '@/app/_actions/uploadIcon';
 import { Users, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface EnrolledSubject {
   id: string;
+  hasNewContent: boolean;
   subjectInstance: {
     id: string;
     teacherName: string;
@@ -84,6 +85,23 @@ export default function DashboardPage() {
     updateImageUrls();
   }, [enrolledSubjects, imageUrls]);
 
+  const handleSubjectClick = async (enrollment: EnrolledSubject) => {
+    if (enrollment.hasNewContent) {
+      const result = await updateEnrollmentNewContent(enrollment.id);
+      if (result.success) {
+        // Update local state to reflect the change
+        setEnrolledSubjects(prev => 
+          prev.map(e => 
+            e.id === enrollment.id 
+              ? { ...e, hasNewContent: false }
+              : e
+          )
+        );
+      }
+    }
+    router.push(`/student/dashboard/${enrollment.subjectInstance.id}`);
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -122,9 +140,12 @@ export default function DashboardPage() {
             return (
               <div
                 key={enrollment.id}
-                onClick={() => router.push(`/student/dashboard/${instance.id}`)}
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 hover:scale-[1.02] transform cursor-pointer"
+                onClick={() => handleSubjectClick(enrollment)}
+                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 hover:scale-[1.02] transform cursor-pointer relative"
               >
+                {enrollment.hasNewContent && (
+                  <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full animate-pulse z-10"></div>
+                )}
                 <div className="relative h-40 w-full">
                   {isImageLoading ? (
                     <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
