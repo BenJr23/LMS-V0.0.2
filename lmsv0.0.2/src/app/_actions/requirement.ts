@@ -116,4 +116,84 @@ export async function deleteRequirement(id: string) {
     console.error('Error deleting requirement:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Failed to delete requirement' };
   }
+}
+
+export async function getStudentRequirements(subjectInstanceId: string) {
+  try {
+    const { userId } = await auth();
+    
+    if (!userId) {
+      console.log('No user ID found');
+      throw new Error('Unauthorized');
+    }
+
+    console.log('Checking enrollment for user:', userId, 'subject:', subjectInstanceId);
+
+    // First verify if the student is enrolled in this subject
+    const enrollment = await prisma.enrolment.findFirst({
+      where: {
+        userId,
+        subjectInstanceId,
+        enrollmentStatus: 'enrolled'
+      }
+    });
+
+    console.log('Enrollment found:', enrollment);
+
+    if (!enrollment) {
+      throw new Error('Not enrolled in this subject');
+    }
+
+    console.log('Fetching requirements for subject:', subjectInstanceId);
+
+    const requirements = await prisma.requirement.findMany({
+      where: { 
+        subjectInstanceId,
+      },
+      include: {
+        submissions: {
+          where: {
+            enrollmentId: enrollment.id
+          },
+          select: {
+            id: true,
+            title: true,
+            content: true,
+            filePath: true,
+            graded: true,
+            score: true,
+            feedback: true,
+            createdAt: true,
+            updatedAt: true
+          }
+        }
+      },
+      orderBy: [
+        { type: 'asc' },
+        { requirementNumber: 'asc' }
+      ]
+    });
+
+    console.log('Requirements found:', requirements.length);
+
+    // Transform the data to include submission status
+    const requirementsWithStatus = requirements.map(req => ({
+      ...req,
+      submissionStatus: req.submissions.length > 0 
+        ? req.submissions[0].graded 
+          ? 'GRADED' as const
+          : 'SUBMITTED' as const
+        : 'NOT_SUBMITTED' as const,
+      submission: req.submissions[0] || null
+    }));
+
+    return { success: true, data: requirementsWithStatus };
+  } catch (error) {
+    console.error('Error fetching student requirements:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to fetch requirements',
+      data: [] 
+    };
+  }
 } 

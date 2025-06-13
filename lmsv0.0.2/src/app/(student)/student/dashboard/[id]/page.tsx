@@ -3,7 +3,32 @@
 import { useState, useEffect, use } from 'react';
 import { Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2, Calendar, MessageSquare, HelpCircle, Users } from 'lucide-react';
 import { getSubjectInstanceDetails } from '@/app/_actions/subjectInstance';
+import { getStudentRequirements } from '@/app/_actions/requirement';
 import toast from 'react-hot-toast';
+
+interface Submission {
+  id: string;
+  title: string | null;
+  content: string | null;
+  filePath: string | null;
+  graded: boolean;
+  score: number | null;
+  feedback: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface Requirement {
+  id: string;
+  requirementNumber: number;
+  title: string | null;
+  content: string | null;
+  scoreBase: number;
+  deadline: Date;
+  type: string;
+  submissionStatus: 'GRADED' | 'SUBMITTED' | 'NOT_SUBMITTED';
+  submission: Submission | null;
+}
 
 interface SubjectInstance {
   id: string;
@@ -37,38 +62,45 @@ interface SubjectInstance {
     createdAt: Date;
     updatedAt: Date;
   }>;
-  requirements: Array<{
-    id: string;
-    requirementNumber: number;
-    title: string | null;
-    content: string | null;
-    scoreBase: number;
-    deadline: Date;
-    type: string;
-    submissions: Array<{
-      id: string;
-      title: string | null;
-      content: string | null;
-      filePath: string | null;
-      graded: boolean;
-      score: number | null;
-      feedback: string | null;
-      createdAt: Date;
-      updatedAt: Date;
-    }>;
-  }>;
 }
 
 export default function SubjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const [activeTab, setActiveTab] = useState('announcements');
   const [subjectInstance, setSubjectInstance] = useState<SubjectInstance | null>(null);
+  const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const REQUIREMENT_TYPES = [
+    { key: 'FORUMS', label: 'FORUMS', icon: <MessageSquare className="w-5 h-5" /> },
+    { key: 'QUIZZES', label: 'QUIZZES', icon: <HelpCircle className="w-5 h-5" /> },
+    { key: 'ASSIGNMENTS', label: 'ASSIGNMENTS', icon: <FileText className="w-5 h-5" /> },
+    { key: 'ACTIVITIES', label: 'ACTIVITIES', icon: <Users className="w-5 h-5" /> }
+  ];
 
   const fetchData = async () => {
     try {
-      const data = await getSubjectInstanceDetails(resolvedParams.id);
-      setSubjectInstance(data);
+      console.log('Fetching data for subject:', resolvedParams.id);
+      
+      const [instanceData, requirementsData] = await Promise.all([
+        getSubjectInstanceDetails(resolvedParams.id),
+        getStudentRequirements(resolvedParams.id)
+      ]);
+
+      console.log('Instance Data:', instanceData);
+      console.log('Requirements Data:', requirementsData);
+
+      if (instanceData) {
+        setSubjectInstance(instanceData);
+      }
+
+      if (requirementsData.success && requirementsData.data) {
+        console.log('Setting requirements:', requirementsData.data);
+        setRequirements(requirementsData.data);
+      } else {
+        console.log('No requirements data found or error:', requirementsData.error);
+        setRequirements([]);
+      }
     } catch (error) {
       console.error('Failed to fetch data:', error);
       toast.error('Failed to load subject details');
@@ -104,6 +136,13 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
+  const groupedRequirements = requirements.reduce((acc, req) => {
+    const key = req.type.toUpperCase() + 'S';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(req);
+    return acc;
+  }, {} as Record<string, Requirement[]>);
+
   return (
     <div className="p-0 md:p-6">
       {/* Header Section */}
@@ -117,21 +156,19 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
           </span>
         </div>
         <div className="flex-1">
-          <div className="flex justify-between items-start">
-            <div>
-              <h2 className="text-3xl font-extrabold text-gray-900 mb-1 leading-tight">
-                {subjectInstance.subject.name}
-              </h2>
-              <div className="flex flex-wrap items-center gap-4 text-base text-gray-700 mt-1">
-                <span className="flex items-center gap-1">
-                  <UserCircle2 className="w-5 h-5 text-[#800000]" />
-                  {subjectInstance.teacherName}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-5 h-5 text-[#800000]" />
-                  Grade {subjectInstance.grade} - Section {subjectInstance.section}
-                </span>
-              </div>
+          <div>
+            <h2 className="text-3xl font-extrabold text-gray-900 mb-1 leading-tight">
+              {subjectInstance.subject.name}
+            </h2>
+            <div className="flex flex-wrap items-center gap-4 text-base text-gray-700 mt-1">
+              <span className="flex items-center gap-1">
+                <UserCircle2 className="w-5 h-5 text-[#800000]" />
+                {subjectInstance.teacherName}
+              </span>
+              <span className="flex items-center gap-1">
+                <Calendar className="w-5 h-5 text-[#800000]" />
+                Grade {subjectInstance.grade} - Section {subjectInstance.section}
+              </span>
             </div>
           </div>
         </div>
@@ -170,21 +207,14 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
                 <div className="flex-1">
                   <h4 className="font-semibold text-[#800000] text-lg">{announcement.title}</h4>
                   <p className="text-xs text-gray-500 mb-1">
-                    {new Date(announcement.createdAt).toLocaleString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                      hour: 'numeric',
-                      minute: 'numeric',
-                      hour12: true
-                    })}
+                    {new Date(announcement.createdAt).toLocaleString()}
                   </p>
                   <p className="mt-1 text-gray-800 text-sm">{announcement.content}</p>
                 </div>
               </div>
             ))
           ) : (
-            <div className="text-center text-gray-500 py-8">
+            <div className="text-center py-8 text-gray-500">
               No announcements available.
             </div>
           )}
@@ -201,36 +231,32 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
             subjectInstance.moduleFolders.map((folder) => (
               <div key={folder.id} className="bg-white rounded-lg p-4 shadow border border-pink-100">
                 <h4 className="font-medium text-gray-900 mb-2">{folder.folderName}</h4>
-                {subjectInstance.uploadedContents.filter(content => content.id.startsWith(folder.id)).length === 0 ? (
-                  <div className="text-gray-400 italic text-sm">No files available in this folder.</div>
-                ) : (
-                  <ul className="mt-2 space-y-2">
-                    {subjectInstance.uploadedContents
-                      .filter(content => content.id.startsWith(folder.id))
-                      .map((content) => (
-                        <li key={content.id} className="flex items-center justify-between text-sm text-gray-700 border-b pb-1 last:border-b-0">
-                          <span className="flex items-center gap-2">
-                            {content.fileName.endsWith('.pdf') ? (
-                              <FileText className="w-4 h-4 text-red-500" />
-                            ) : content.fileName.endsWith('.pptx') ? (
-                              <FileText className="w-4 h-4 text-orange-500" />
-                            ) : (
-                              <File className="w-4 h-4 text-gray-400" />
-                            )}
-                            {content.fileName}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {new Date(content.createdAt).toLocaleDateString()}
-                          </span>
-                        </li>
-                      ))}
-                  </ul>
-                )}
+                <div className="mt-2 space-y-2">
+                  {subjectInstance.uploadedContents
+                    .filter(content => content.fileName.includes(folder.folderName))
+                    .map((file) => (
+                      <div key={file.id} className="flex items-center justify-between text-sm text-gray-700 border-b pb-1 last:border-b-0">
+                        <span className="flex items-center gap-2">
+                          {file.fileName.endsWith('.pdf') ? (
+                            <FileText className="w-4 h-4 text-red-500" />
+                          ) : file.fileName.endsWith('.pptx') ? (
+                            <FileText className="w-4 h-4 text-orange-500" />
+                          ) : (
+                            <File className="w-4 h-4 text-gray-400" />
+                          )}
+                          {file.fileName}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(file.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    ))}
+                </div>
               </div>
             ))
           ) : (
-            <div className="text-center text-gray-500 py-8">
-              No module folders available.
+            <div className="text-center py-8 text-gray-500">
+              No files available.
             </div>
           )}
         </div>
@@ -239,14 +265,12 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
       {/* Requirements Tab */}
       {activeTab === 'requirements' && (
         <div>
-          {['FORUM', 'QUIZ', 'ASSIGNMENT', 'ACTIVITY'].map((type) => (
-            <div key={type} className="mb-8">
-              <div className="flex items-center gap-2 mb-3">
-                <h4 className="text-lg font-bold text-[#800000] uppercase tracking-wide flex items-center gap-2">
-                  <ClipboardList className="w-5 h-5" />
-                  {type}S
-                </h4>
-              </div>
+          {REQUIREMENT_TYPES.map(({ key, label, icon }) => (
+            <div key={key} className="mb-8">
+              <h4 className="text-lg font-bold text-[#800000] uppercase tracking-wide flex items-center gap-2 mb-3">
+                <ClipboardList className="w-5 h-5" />
+                {label}
+              </h4>
               <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-pink-100">
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm">
@@ -260,68 +284,65 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-pink-50">
-                      {subjectInstance.requirements.filter(req => req.type === type).length > 0 ? (
-                        subjectInstance.requirements
-                          .filter(req => req.type === type)
-                          .map((req) => {
-                            const submission = req.submissions[0];
-                            const isOverdue = new Date(req.deadline) < new Date();
-                            const statusColor = submission 
-                              ? submission.graded 
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-yellow-100 text-yellow-800'
-                              : isOverdue 
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-gray-100 text-gray-800';
+                      {groupedRequirements[key]?.length > 0 ? (
+                        groupedRequirements[key].map((req) => {
+                          const isOverdue = new Date(req.deadline) < new Date() && req.submissionStatus === 'NOT_SUBMITTED';
+                          const statusColor = req.submissionStatus === 'GRADED' 
+                            ? 'bg-green-100 text-green-800'
+                            : req.submissionStatus === 'SUBMITTED'
+                            ? 'bg-blue-100 text-blue-800'
+                            : isOverdue
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-gray-100 text-gray-800';
 
-                            return (
-                              <tr key={req.id} className="hover:bg-pink-50/50 transition-colors duration-150">
-                                <td className="p-4 text-gray-800 font-medium">
-                                  <span className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium bg-pink-100 text-[#800000]">
-                                    {req.type}# {req.requirementNumber}
-                                  </span>
-                                </td>
-                                <td className="p-4 text-gray-800 font-medium">
-                                  <div className="flex items-center gap-2">
-                                    {req.type === 'Forum' && <MessageSquare className="w-4 h-4 text-blue-500" />}
-                                    {req.type === 'Quiz' && <HelpCircle className="w-4 h-4 text-purple-500" />}
-                                    {req.type === 'Assignment' && <FileText className="w-4 h-4 text-orange-500" />}
-                                    {req.type === 'Activity' && <Users className="w-4 h-4 text-green-500" />}
-                                    <span className="line-clamp-2">{req.title}</span>
-                                  </div>
-                                </td>
-                                <td className="p-4 text-gray-600">
-                                  <div className="flex items-center gap-2">
-                                    <Calendar className="w-4 h-4 text-gray-400" />
-                                    {new Date(req.deadline).toLocaleString('en-US', {
-                                      month: 'short',
-                                      day: 'numeric',
-                                      year: 'numeric',
-                                      hour: 'numeric',
-                                      minute: 'numeric',
-                                      hour12: true
-                                    })}
-                                  </div>
-                                </td>
-                                <td className="p-4 text-gray-600 font-medium">{req.scoreBase} pts</td>
-                                <td className="p-4">
-                                  <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium ${statusColor}`}>
-                                    {submission 
-                                      ? submission.graded 
-                                        ? `Graded: ${submission.score}/${req.scoreBase}`
-                                        : 'Submitted'
-                                      : isOverdue 
-                                        ? 'Overdue'
-                                        : 'Not Submitted'}
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          })
+                          return (
+                            <tr key={req.id} className="hover:bg-pink-50/50 transition-colors duration-150">
+                              <td className="p-4 text-gray-800 font-medium">
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium bg-pink-100 text-[#800000]">
+                                  {req.type}# {req.requirementNumber}
+                                </span>
+                              </td>
+                              <td className="p-4 text-gray-800 font-medium">
+                                <div className="flex items-center gap-2">
+                                  {req.type === 'Forum' && <MessageSquare className="w-4 h-4 text-blue-500" />}
+                                  {req.type === 'Quiz' && <HelpCircle className="w-4 h-4 text-purple-500" />}
+                                  {req.type === 'Assignment' && <FileText className="w-4 h-4 text-orange-500" />}
+                                  {req.type === 'Activity' && <Users className="w-4 h-4 text-green-500" />}
+                                  <span className="line-clamp-2">{req.title || 'Untitled'}</span>
+                                </div>
+                              </td>
+                              <td className="p-4 text-gray-600">
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="w-4 h-4 text-gray-400" />
+                                  {new Date(req.deadline).toLocaleString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                    hour: 'numeric',
+                                    minute: 'numeric',
+                                    hour12: true
+                                  })}
+                                </div>
+                              </td>
+                              <td className="p-4 text-gray-600 font-medium">{req.scoreBase} pts</td>
+                              <td className="p-4">
+                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColor}`}>
+                                  {req.submissionStatus === 'GRADED' 
+                                    ? `Graded (${req.submission?.score}/${req.scoreBase})`
+                                    : req.submissionStatus === 'SUBMITTED'
+                                    ? 'Submitted'
+                                    : isOverdue
+                                    ? 'Overdue'
+                                    : 'Not Submitted'}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })
                       ) : (
                         <tr>
                           <td colSpan={5} className="p-4 text-center text-gray-500 italic">
-                            No {type.toLowerCase()}s available.
+                            No {label.toLowerCase()} available yet.
                           </td>
                         </tr>
                       )}
@@ -335,4 +356,4 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
       )}
     </div>
   );
-}
+} 
