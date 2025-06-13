@@ -26,11 +26,16 @@ async function main() {
   for (const subject of subjects) {
     await prisma.subject.upsert({
       where: { code: subject.code },
-      update: { name: subject.name },
+      update: { 
+        name: subject.name,
+        updatedAt: new Date()
+      },
       create: {
         name: subject.name,
         code: subject.code,
         createdById: DEFAULT_CREATOR_ID,
+        createdAt: new Date(),
+        updatedAt: new Date()
       },
     });
   }
