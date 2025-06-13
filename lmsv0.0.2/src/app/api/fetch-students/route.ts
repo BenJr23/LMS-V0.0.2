@@ -1,22 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
+  console.log('📥 Fetch Students API: Request received');
   const { searchParams } = new URL(req.url);
   const encodedEmail = searchParams.get('email');
 
   if (!encodedEmail) {
+    console.error('❌ Fetch Students API: Missing email parameter');
     return NextResponse.json({ error: 'Missing email parameter' }, { status: 400 });
   }
 
   const email = decodeURIComponent(encodedEmail);
+  console.log('📧 Fetch Students API: Processing request for email:', email);
+
   const rawBody = JSON.stringify({ email });
   const timestamp = Date.now().toString();
   const secret = process.env.SJSFI_SHARED_SECRET;
 
   if (!secret) {
+    console.error('❌ Fetch Students API: Server configuration error - Missing SJSFI_SHARED_SECRET');
     return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
   }
 
+  console.log('🔑 Fetch Students API: Generating HMAC signature');
   const encoder = new TextEncoder();
   const keyData = encoder.encode(secret);
   const cryptoKey = await crypto.subtle.importKey(
@@ -39,8 +45,16 @@ export async function GET(req: NextRequest) {
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 
+  console.log('🔐 Fetch Students API: Signature generated successfully');
+
   try {
-    console.log('Fetching student data for email:', email);
+    console.log('🌐 Fetch Students API: Making request to external API');
+    console.log('Request details:', {
+      url: 'https://sjsfi-auth-2a04ezduh-dnsxmrs-projects.vercel.app/api/xr/getStudent',
+      method: 'POST',
+      timestamp,
+      email
+    });
     
     const response = await fetch('https://sjsfi-auth-2a04ezduh-dnsxmrs-projects.vercel.app/api/xr/getStudent', {
       method: 'POST',
@@ -54,14 +68,18 @@ export async function GET(req: NextRequest) {
     });
 
     if (!response.ok) {
-      console.error('Failed to fetch student data. Status:', response.status);
+      console.error('❌ Fetch Students API: External API request failed', {
+        status: response.status,
+        statusText: response.statusText,
+        email
+      });
       return NextResponse.json({ error: 'Failed to fetch student data' }, { status: response.status });
     }
 
     const data = await response.json();
     
     // Log the complete student data
-    console.log('Student Data Retrieved:', {
+    console.log('✅ Fetch Students API: Student data retrieved successfully', {
       timestamp: new Date().toISOString(),
       email: email,
       data: data
@@ -69,7 +87,7 @@ export async function GET(req: NextRequest) {
 
     // Log specific fields if they exist
     if (data) {
-      console.log('Student Details:', {
+      console.log('📋 Fetch Students API: Student details', {
         name: `${data.first_name} ${data.last_name}`,
         email: data.email,
         role: data.role,
@@ -90,10 +108,11 @@ export async function GET(req: NextRequest) {
     
 
   } catch (error) {
-    console.error('Error fetching student data:', {
+    console.error('💥 Fetch Students API: Error occurred', {
       error: error,
       email: email,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      stack: error instanceof Error ? error.stack : 'No stack trace'
     });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
