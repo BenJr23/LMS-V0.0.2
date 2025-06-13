@@ -5,6 +5,16 @@ import { auth } from '@clerk/nextjs/server';
 
 const prisma = new PrismaClient();
 
+export interface CreateSubjectInstanceData {
+  teacherName: string;
+  grade: string;
+  section: string;
+  enrollment: number;
+  enrolmentCode: number;
+  icon: string;
+  subjectId: string;
+}
+
 export async function createSubjectInstance(formData: {
   teacherName: string;
   grade: string;
@@ -149,6 +159,131 @@ export async function updateSubjectInstance(id: string, data: {
     return updatedInstance;
   } catch (error) {
     console.error('Error updating subject instance:', error);
+    throw error;
+  }
+}
+
+export async function getSubjectInstanceDetails(id: string) {
+  try {
+    const { userId } = await auth();
+    
+    if (!userId) {
+      throw new Error('Unauthorized');
+    }
+
+    const subjectInstance = await prisma.subjectInstance.findUnique({
+      where: { 
+        id
+      },
+      include: {
+        subject: {
+          select: {
+            id: true,
+            name: true,
+            code: true
+          }
+        },
+        announcements: {
+          where: {
+            subjectInstanceId: id
+          },
+          select: {
+            id: true,
+            title: true,
+            content: true,
+            createdAt: true,
+            updatedAt: true
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
+        },
+        moduleFolders: {
+          where: {
+            subjectInstanceId: id
+          },
+          select: {
+            id: true,
+            folderName: true,
+            createdAt: true,
+            updatedAt: true
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
+        },
+        uploadedContents: {
+          where: {
+            subjectInstanceId: id
+          },
+          select: {
+            id: true,
+            fileName: true,
+            filePath: true,
+            createdAt: true,
+            updatedAt: true
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
+        },
+        requirements: {
+          where: {
+            subjectInstanceId: id
+          },
+          select: {
+            id: true,
+            requirementNumber: true,
+            title: true,
+            content: true,
+            scoreBase: true,
+            deadline: true,
+            type: true,
+            submissions: {
+              where: {
+                userId: userId
+              },
+              select: {
+                id: true,
+                title: true,
+                content: true,
+                filePath: true,
+                graded: true,
+                score: true,
+                feedback: true,
+                createdAt: true,
+                updatedAt: true
+              }
+            }
+          },
+          orderBy: {
+            requirementNumber: 'asc'
+          }
+        }
+      }
+    });
+
+    if (!subjectInstance) {
+      throw new Error('Subject instance not found');
+    }
+
+    // Ensure all required fields are present
+    if (!subjectInstance.subject || !subjectInstance.subject.name || !subjectInstance.subject.code) {
+      throw new Error('Invalid subject data');
+    }
+
+    // Add null checks for related entities
+    const sanitizedInstance = {
+      ...subjectInstance,
+      announcements: subjectInstance.announcements || [],
+      moduleFolders: subjectInstance.moduleFolders || [],
+      uploadedContents: subjectInstance.uploadedContents || [],
+      requirements: subjectInstance.requirements || []
+    };
+
+    return sanitizedInstance;
+  } catch (error) {
+    console.error('Failed to fetch subject instance details:', error);
     throw error;
   }
 }

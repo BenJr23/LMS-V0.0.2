@@ -6,6 +6,17 @@ import { revalidatePath } from 'next/cache';
 
 const prisma = new PrismaClient();
 
+export interface EnrolmentData {
+  subjectInstanceId: string;
+  code: number;
+  fullName: string;
+  email: string;
+  gradeLevel: string;
+  enrollmentStatus: string;
+  status: string;
+  hasNewContent?: boolean;  // Added to match schema
+}
+
 interface EnrolmentResponse {
   success: boolean;
   data?: Enrolment;

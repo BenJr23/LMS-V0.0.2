@@ -16,7 +16,13 @@ export async function getAvailableSubjects() {
     // Get all subject instances with their enrolments
     const allSubjectInstances = await prisma.subjectInstance.findMany({
       include: {
-        subject: true,
+        subject: {
+          select: {
+            id: true,
+            name: true,
+            code: true
+          }
+        },
         enrolments: {
           where: {
             userId: userId

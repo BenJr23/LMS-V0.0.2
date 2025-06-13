@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { CalendarDays, Bell, FileText, ClipboardList, FileText as FileTextIcon, UserCircle2, MessageSquare, HelpCircle, Users, Eye, MoreVertical, Calendar } from 'lucide-react';
-import { getSubjectInstance } from '@/app/_actions/subjectInstance';
-import { getRequirements } from '@/app/_actions/requirement';
-import { toast } from 'react-hot-toast';
+import { useState, useEffect, use } from 'react';
+import { Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2, Calendar, MessageSquare, HelpCircle, Users } from 'lucide-react';
+import { getSubjectInstanceDetails } from '@/app/_actions/subjectInstance';
+import toast from 'react-hot-toast';
 
 interface SubjectInstance {
   id: string;
@@ -18,27 +17,69 @@ interface SubjectInstance {
     name: string;
     code: string;
   };
+  announcements: Array<{
+    id: string;
+    title: string;
+    content: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+  moduleFolders: Array<{
+    id: string;
+    folderName: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+  uploadedContents: Array<{
+    id: string;
+    fileName: string;
+    filePath: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+  requirements: Array<{
+    id: string;
+    requirementNumber: number;
+    title: string | null;
+    content: string | null;
+    scoreBase: number;
+    deadline: Date;
+    type: string;
+    submissions: Array<{
+      id: string;
+      title: string | null;
+      content: string | null;
+      filePath: string | null;
+      graded: boolean;
+      score: number | null;
+      feedback: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+    }>;
+  }>;
 }
 
-interface Requirement {
-  id: string;
-  requirementNumber: number;
-  title: string | null;
-  content: string | null;
-  scoreBase: number;
-  deadline: Date;
-  type: string;
-  subjectInstanceId: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export default function CourseDetailPage({ params }: { params: { id: string } }) {
+export default function SubjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
   const [activeTab, setActiveTab] = useState('announcements');
   const [subjectInstance, setSubjectInstance] = useState<SubjectInstance | null>(null);
-  const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = async () => {
+    try {
+      const data = await getSubjectInstanceDetails(resolvedParams.id);
+      setSubjectInstance(data);
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+      toast.error('Failed to load subject details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [resolvedParams.id]);
 
   const tabs = [
     { id: 'announcements', label: 'Announcements', icon: <Bell className="w-4 h-4 mr-1" /> },
@@ -46,58 +87,19 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
     { id: 'requirements', label: 'Requirements', icon: <ClipboardList className="w-4 h-4 mr-1" /> },
   ];
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [instanceData, requirementsData] = await Promise.all([
-          getSubjectInstance(params.id),
-          getRequirements(params.id)
-        ]);
-
-        if (instanceData) {
-          setSubjectInstance(instanceData);
-        }
-
-        if (requirementsData.success && requirementsData.data) {
-          setRequirements(requirementsData.data);
-        } else {
-          setRequirements([]);
-        }
-      } catch (error) {
-        console.error('Failed to fetch data:', error);
-        toast.error('Failed to load course details');
-        setError('Failed to load course details');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [params.id]);
-
-  // Group requirements by type
-  const groupedRequirements = requirements.reduce((acc, req) => {
-    const key = req.type.toUpperCase() + 'S';
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(req);
-    return acc;
-  }, {} as Record<string, Requirement[]>);
-
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#800000]"></div>
+      <div className="p-6 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#800000]"></div>
       </div>
     );
   }
 
-  if (error || !subjectInstance) {
+  if (!subjectInstance) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-red-500 text-center">
-          <p className="text-xl font-semibold mb-2">Error</p>
-          <p>{error || 'Course not found'}</p>
-        </div>
+      <div className="p-6 text-center">
+        <h2 className="text-2xl font-bold text-gray-900">Subject not found</h2>
+        <p className="text-gray-600 mt-2">The requested subject could not be found.</p>
       </div>
     );
   }
@@ -115,18 +117,22 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
           </span>
         </div>
         <div className="flex-1">
-          <h2 className="text-3xl font-extrabold text-gray-900 mb-1 leading-tight">
-            {subjectInstance.subject.name}
-          </h2>
-          <div className="flex flex-wrap items-center gap-4 text-base text-gray-700 mt-1">
-            <span className="flex items-center gap-1">
-              <UserCircle2 className="w-5 h-5 text-[#800000]" />
-              {subjectInstance.teacherName}
-            </span>
-            <span className="flex items-center gap-1">
-              <CalendarDays className="w-5 h-5 text-[#800000]" />
-              Grade {subjectInstance.grade} - Section {subjectInstance.section}
-            </span>
+          <div className="flex justify-between items-start">
+            <div>
+              <h2 className="text-3xl font-extrabold text-gray-900 mb-1 leading-tight">
+                {subjectInstance.subject.name}
+              </h2>
+              <div className="flex flex-wrap items-center gap-4 text-base text-gray-700 mt-1">
+                <span className="flex items-center gap-1">
+                  <UserCircle2 className="w-5 h-5 text-[#800000]" />
+                  {subjectInstance.teacherName}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-5 h-5 text-[#800000]" />
+                  Grade {subjectInstance.grade} - Section {subjectInstance.section}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -155,22 +161,33 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
           <h3 className="text-lg font-bold text-[#800000] mb-2 flex items-center gap-2">
             <Bell className="w-5 h-5" /> Announcements
           </h3>
-          <div className="bg-white rounded-lg p-5 shadow flex gap-4 border-l-4 border-[#800000]/80">
-            <div className="flex flex-col items-center pt-1">
-              <Bell className="text-[#800000] w-6 h-6" />
+          {subjectInstance.announcements.length > 0 ? (
+            subjectInstance.announcements.map((announcement) => (
+              <div key={announcement.id} className="bg-white rounded-lg p-5 shadow flex gap-4 border-l-4 border-[#800000]/80">
+                <div className="flex flex-col items-center pt-1">
+                  <Bell className="text-[#800000] w-6 h-6" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-[#800000] text-lg">{announcement.title}</h4>
+                  <p className="text-xs text-gray-500 mb-1">
+                    {new Date(announcement.createdAt).toLocaleString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: 'numeric',
+                      minute: 'numeric',
+                      hour12: true
+                    })}
+                  </p>
+                  <p className="mt-1 text-gray-800 text-sm">{announcement.content}</p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center text-gray-500 py-8">
+              No announcements available.
             </div>
-            <div className="flex-1">
-              <h4 className="font-semibold text-[#800000] text-lg">
-                Welcome to {subjectInstance.subject.code}
-              </h4>
-              <p className="text-xs text-gray-500 mb-1">
-                {subjectInstance.teacherName} • Just now
-              </p>
-              <p className="mt-1 text-gray-800 text-sm">
-                Welcome to {subjectInstance.subject.name}! This course will cover the fundamentals of the subject.
-              </p>
-            </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -180,89 +197,140 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
           <h3 className="text-lg font-bold text-[#800000] mb-2 flex items-center gap-2">
             <FileTextIcon className="w-5 h-5" /> Course Files
           </h3>
-          <div className="bg-white rounded-lg p-4 shadow border border-pink-100">
-            <h4 className="font-medium text-gray-900 mb-2">Module 1: Introduction</h4>
-            <div className="text-gray-400 italic text-sm">No files available for this module.</div>
-          </div>
+          {subjectInstance.moduleFolders.length > 0 ? (
+            subjectInstance.moduleFolders.map((folder) => (
+              <div key={folder.id} className="bg-white rounded-lg p-4 shadow border border-pink-100">
+                <h4 className="font-medium text-gray-900 mb-2">{folder.folderName}</h4>
+                {subjectInstance.uploadedContents.filter(content => content.id.startsWith(folder.id)).length === 0 ? (
+                  <div className="text-gray-400 italic text-sm">No files available in this folder.</div>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {subjectInstance.uploadedContents
+                      .filter(content => content.id.startsWith(folder.id))
+                      .map((content) => (
+                        <li key={content.id} className="flex items-center justify-between text-sm text-gray-700 border-b pb-1 last:border-b-0">
+                          <span className="flex items-center gap-2">
+                            {content.fileName.endsWith('.pdf') ? (
+                              <FileText className="w-4 h-4 text-red-500" />
+                            ) : content.fileName.endsWith('.pptx') ? (
+                              <FileText className="w-4 h-4 text-orange-500" />
+                            ) : (
+                              <File className="w-4 h-4 text-gray-400" />
+                            )}
+                            {content.fileName}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(content.createdAt).toLocaleDateString()}
+                          </span>
+                        </li>
+                      ))}
+                  </ul>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="text-center text-gray-500 py-8">
+              No module folders available.
+            </div>
+          )}
         </div>
       )}
 
       {/* Requirements Tab */}
       {activeTab === 'requirements' && (
         <div>
-          {Object.entries(groupedRequirements).map(([section, items]) => (
-            <div key={section} className="mb-8">
-              <h4 className="text-lg font-bold text-[#800000] mb-3 uppercase tracking-wide flex items-center gap-2">
-                <ClipboardList className="w-5 h-5" />
-                {section}
-              </h4>
+          {['FORUM', 'QUIZ', 'ASSIGNMENT', 'ACTIVITY'].map((type) => (
+            <div key={type} className="mb-8">
+              <div className="flex items-center gap-2 mb-3">
+                <h4 className="text-lg font-bold text-[#800000] uppercase tracking-wide flex items-center gap-2">
+                  <ClipboardList className="w-5 h-5" />
+                  {type}S
+                </h4>
+              </div>
               <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-pink-100">
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm">
                     <thead>
                       <tr className="bg-pink-50 border-b border-pink-100">
-                        <th className="p-4 text-left font-semibold text-[#800000] w-[35%]">Title</th>
+                        <th className="p-4 text-left font-semibold text-[#800000] w-[15%]">Requirement</th>
+                        <th className="p-4 text-left font-semibold text-[#800000] w-[30%]">Title</th>
                         <th className="p-4 text-left font-semibold text-[#800000] w-[20%]">Due Date</th>
-                        <th className="p-4 text-left font-semibold text-[#800000] w-[15%]">Status</th>
-                        <th className="p-4 text-left font-semibold text-[#800000] w-[10%]">Points</th>
-                        <th className="p-4 text-left font-semibold text-[#800000] w-[20%]">Action</th>
+                        <th className="p-4 text-left font-semibold text-[#800000] w-[15%]">Points</th>
+                        <th className="p-4 text-left font-semibold text-[#800000] w-[20%]">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-pink-50">
-                      {items.map((req) => (
-                        <tr key={req.id} className="hover:bg-pink-50/50 transition-colors duration-150">
-                          <td className="p-4 text-gray-800 font-medium">
-                            <div className="flex items-center gap-2">
-                              {req.type === 'Forum' && <MessageSquare className="w-4 h-4 text-blue-500" />}
-                              {req.type === 'Quiz' && <HelpCircle className="w-4 h-4 text-purple-500" />}
-                              {req.type === 'Assignment' && <FileTextIcon className="w-4 h-4 text-orange-500" />}
-                              {req.type === 'Activity' && <Users className="w-4 h-4 text-green-500" />}
-                              <span className="line-clamp-2">{req.title}</span>
-                            </div>
-                          </td>
-                          <td className="p-4 text-gray-600">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-gray-400" />
-                              {new Date(req.deadline).toLocaleString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                                hour: 'numeric',
-                                minute: 'numeric',
-                                hour12: true
-                              })}
-                            </div>
-                          </td>
-                          <td className="p-4">
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                              Not Started
-                            </span>
-                          </td>
-                          <td className="p-4 text-gray-600 font-medium">{req.scoreBase} pts</td>
-                          <td className="p-4">
-                            <div className="flex items-center gap-2">
-                              <button className="px-3 py-1.5 rounded-md bg-[#800000] text-white text-xs font-semibold shadow-sm hover:bg-[#a52a2a] transition-colors duration-200 flex items-center gap-1">
-                                <Eye className="w-3.5 h-3.5" />
-                                View
-                              </button>
-                              <button className="p-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors duration-200">
-                                <MoreVertical className="w-4 h-4" />
-                              </button>
-                            </div>
+                      {subjectInstance.requirements.filter(req => req.type === type).length > 0 ? (
+                        subjectInstance.requirements
+                          .filter(req => req.type === type)
+                          .map((req) => {
+                            const submission = req.submissions[0];
+                            const isOverdue = new Date(req.deadline) < new Date();
+                            const statusColor = submission 
+                              ? submission.graded 
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-yellow-100 text-yellow-800'
+                              : isOverdue 
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-gray-100 text-gray-800';
+
+                            return (
+                              <tr key={req.id} className="hover:bg-pink-50/50 transition-colors duration-150">
+                                <td className="p-4 text-gray-800 font-medium">
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium bg-pink-100 text-[#800000]">
+                                    {req.type}# {req.requirementNumber}
+                                  </span>
+                                </td>
+                                <td className="p-4 text-gray-800 font-medium">
+                                  <div className="flex items-center gap-2">
+                                    {req.type === 'Forum' && <MessageSquare className="w-4 h-4 text-blue-500" />}
+                                    {req.type === 'Quiz' && <HelpCircle className="w-4 h-4 text-purple-500" />}
+                                    {req.type === 'Assignment' && <FileText className="w-4 h-4 text-orange-500" />}
+                                    {req.type === 'Activity' && <Users className="w-4 h-4 text-green-500" />}
+                                    <span className="line-clamp-2">{req.title}</span>
+                                  </div>
+                                </td>
+                                <td className="p-4 text-gray-600">
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className="w-4 h-4 text-gray-400" />
+                                    {new Date(req.deadline).toLocaleString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric',
+                                      hour: 'numeric',
+                                      minute: 'numeric',
+                                      hour12: true
+                                    })}
+                                  </div>
+                                </td>
+                                <td className="p-4 text-gray-600 font-medium">{req.scoreBase} pts</td>
+                                <td className="p-4">
+                                  <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium ${statusColor}`}>
+                                    {submission 
+                                      ? submission.graded 
+                                        ? `Graded: ${submission.score}/${req.scoreBase}`
+                                        : 'Submitted'
+                                      : isOverdue 
+                                        ? 'Overdue'
+                                        : 'Not Submitted'}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })
+                      ) : (
+                        <tr>
+                          <td colSpan={5} className="p-4 text-center text-gray-500 italic">
+                            No {type.toLowerCase()}s available.
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
               </div>
             </div>
           ))}
-          {Object.keys(groupedRequirements).length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No requirements available for this course yet.
-            </div>
-          )}
         </div>
       )}
     </div>

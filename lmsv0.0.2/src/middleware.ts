@@ -25,6 +25,28 @@ export default clerkMiddleware(async (auth, req) => {
     userId
   });
 
+  // Redirect logged-in users away from login pages
+  if (isAuthenticated && (currentPath === '/' || currentPath === '/student-login' || currentPath === '/faculty-login')) {
+    try {
+      const user = await clerkClient.users.getUser(userId);
+      const userRole = user?.privateMetadata?.role as string;
+
+      switch (userRole) {
+        case 'admin':
+          return NextResponse.redirect(new URL('/admin/dashboard', req.url));
+        case 'faculty':
+          return NextResponse.redirect(new URL('/faculty/dashboard', req.url));
+        case 'student':
+          return NextResponse.redirect(new URL('/student/dashboard', req.url));
+        default:
+          return NextResponse.redirect(new URL('/', req.url));
+      }
+    } catch (error) {
+      console.error('💥 Error checking user role:', error);
+      return NextResponse.redirect(new URL('/', req.url));
+    }
+  }
+
   if (!isPublicRoute(req) && !isAuthenticated) {
     console.log('⚠️ Unauthenticated access attempt');
     return NextResponse.redirect(new URL('/', req.url));

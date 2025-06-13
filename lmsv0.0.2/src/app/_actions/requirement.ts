@@ -8,11 +8,11 @@ const prisma = new PrismaClient();
 
 export interface CreateRequirementData {
   requirementNumber: number;
-  title: string;
-  content: string;
+  title?: string;
+  content?: string;
   scoreBase: number;
   deadline: Date;
-  type: 'Forum' | 'Assignment' | 'Activity' | 'Quiz';
+  type: string;
   subjectInstanceId: string;
 }
 
@@ -25,7 +25,7 @@ export async function createRequirement(data: CreateRequirementData) {
     }
 
     // Validate the data
-    if (!data.requirementNumber || !data.title || !data.scoreBase || !data.deadline || !data.type || !data.subjectInstanceId) {
+    if (!data.requirementNumber || !data.scoreBase || !data.deadline || !data.type || !data.subjectInstanceId) {
       throw new Error('Missing required fields');
     }
 
