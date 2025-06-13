@@ -1,10 +1,8 @@
 "use client";
 import Link from 'next/link';
 import { ReactNode, useState, useRef, useEffect } from 'react';
-import { Bell } from 'lucide-react';
 import Image from 'next/image';
 import { useClerk } from '@clerk/nextjs';
-import { Toaster } from 'react-hot-toast';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -36,13 +34,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <nav className="px-4">
             <ul className="space-y-2">
               <li>
-                <Link href="/student-dashboard" className="block px-4 py-2 rounded-lg hover:bg-white/20 transition font-medium">
+                <Link href="/faculty/dashboard" className="block px-4 py-2 rounded-lg hover:bg-white/20 transition font-medium">
                   Dashboard
-                </Link>
-              </li>
-              <li>
-                <Link href="/student-calendar" className="block px-4 py-2 rounded-lg hover:bg-white/20 transition font-medium">
-                  Calendar
                 </Link>
               </li>
             </ul>
@@ -59,7 +52,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <header className="absolute top-0 left-64 right-0 z-30 px-6 py-4 bg-white/80 shadow border-b border-gray-200 backdrop-blur-md flex justify-between items-center">
           <h1 className="text-xl font-semibold text-[#800000] tracking-wide">WELCOME USER</h1>
           <div className="flex items-center space-x-4">
-            <Bell className="text-[#800000]" />
             <StudentUserDropdown />
           </div>
         </header>
@@ -67,7 +59,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         {/* Routed Page Content */}
         <main className="flex-1 overflow-y-auto pt-28 px-6 pb-6">{children}</main>
       </div>
-      <Toaster position="top-right" />
     </div>
   );
 }
@@ -100,7 +91,7 @@ function StudentUserDropdown() {
         onClick={() => setOpen((prev) => !prev)}
         type="button"
       >
-        Student User
+        Faculty User
       </button>
       {open && (
         <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg py-2 z-50 border border-gray-200 animate-fade-in">

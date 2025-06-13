@@ -3,13 +3,15 @@
 import { useEffect, useState } from 'react';
 import { Eye, Edit, Trash2, Plus } from 'lucide-react';
 import { getSubjects, createSubject, deleteSubject } from '@/app/_actions/subject';
+import toast from 'react-hot-toast';
 
 type Subject = {
   id: string;
   name: string;
   code: string;
   createdById: string;
-  createdAt: string;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 export default function AdminSubjectPage() {
@@ -25,7 +27,11 @@ export default function AdminSubjectPage() {
     const fetchSubjects = async () => {
       try {
         const data = await getSubjects();
-        setSubjects(data);
+        setSubjects(data.map(subject => ({
+          ...subject,
+          createdAt: new Date(subject.createdAt),
+          updatedAt: new Date(subject.updatedAt)
+        })));
       } catch (error) {
         console.error('Failed to fetch subjects:', error);
       }
@@ -41,12 +47,17 @@ export default function AdminSubjectPage() {
 
     try {
       const newSubject = await createSubject(formData);
-      setSubjects(prev => [...prev, newSubject]);
+      setSubjects(prev => [...prev, {
+        ...newSubject,
+        createdAt: new Date(newSubject.createdAt),
+        updatedAt: new Date(newSubject.updatedAt)
+      }]);
       setNewName('');
       setNewCode('');
       setIsModalOpen(false);
+      toast.success('Subject created successfully!');
     } catch (error) {
-      alert('Failed to add subject');
+      toast.error('Failed to add subject');
       console.error(error);
     }
   };
@@ -64,9 +75,10 @@ export default function AdminSubjectPage() {
       setSubjects(prev => prev.filter(sub => sub.id !== subjectToDelete.id));
       setIsDeleteModalOpen(false);
       setSubjectToDelete(null);
+      toast.success('Subject deleted successfully!');
     } catch (error) {
       console.error('Failed to delete subject:', error);
-      alert('Failed to delete subject');
+      toast.error('Failed to delete subject');
     }
   };
 
@@ -198,7 +210,7 @@ export default function AdminSubjectPage() {
                     <td className="px-6 py-4 text-gray-800 font-medium">{subject.name}</td>
                     <td className="px-6 py-4 text-gray-600">{subject.code}</td>
                     <td className="px-6 py-4 text-gray-600">{subject.createdById}</td>
-                    <td className="px-6 py-4 text-gray-600">{new Date(subject.createdAt).toLocaleString()}</td>
+                    <td className="px-6 py-4 text-gray-600">{subject.createdAt.toLocaleString()}</td>
                     <td className="px-6 py-4">
                       <div className="flex justify-center gap-3">
                         <button className="p-2 text-gray-600 hover:text-[#800000] hover:bg-red-50 rounded-lg transition">

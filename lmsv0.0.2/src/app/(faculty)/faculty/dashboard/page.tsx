@@ -9,24 +9,46 @@ import { uploadIcon, getImageUrl } from '@/app/_actions/uploadIcon';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 
+type SubjectInstance = {
+  id: string;
+  teacherName: string;
+  grade: string;
+  section: string;
+  enrollment: number;
+  icon: string;
+  enrolmentCode: number;
+  subject: {
+    id: string;
+    name: string;
+    code: string;
+  };
+  announcements: Array<{
+    id: string;
+    title: string;
+    content: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+  moduleFolders: Array<{
+    id: string;
+    folderName: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+  uploadedContents: Array<{
+    id: string;
+    fileName: string;
+    filePath: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+};
+
 export default function TeachingSectionsPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [subjects, setSubjects] = useState<Array<{ id: string; name: string; code: string }>>([]);
-  const [subjectInstances, setSubjectInstances] = useState<Array<{
-    id: string;
-    teacherName: string;
-    grade: string;
-    section: string;
-    enrollment: number;
-    icon: string;
-    enrolmentCode: number;
-    subject: {
-      id: string;
-      name: string;
-      code: string;
-    };
-  }>>([]);
+  const [subjectInstances, setSubjectInstances] = useState<SubjectInstance[]>([]);
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form, setForm] = useState({

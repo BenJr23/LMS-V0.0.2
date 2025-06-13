@@ -21,6 +21,26 @@ interface SubjectInstance {
     name: string;
     code: string;
   };
+  announcements: Array<{
+    id: string;
+    title: string;
+    content: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+  moduleFolders: Array<{
+    id: string;
+    folderName: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+  uploadedContents: Array<{
+    id: string;
+    fileName: string;
+    filePath: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
 }
 
 interface Requirement {
@@ -34,6 +54,17 @@ interface Requirement {
   subjectInstanceId: string;
   createdAt: Date;
   updatedAt: Date;
+  submissions: Array<{
+    id: string;
+    title: string;
+    content: string;
+    filePath: string | null;
+    graded: boolean;
+    score: number | null;
+    feedback: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
 }
 
 export default function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
