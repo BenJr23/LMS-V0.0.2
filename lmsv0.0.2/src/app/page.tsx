@@ -3,9 +3,28 @@
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { GraduationCap, User } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function Home() {
   const router = useRouter();
+
+  const handleStudentLogin = () => {
+    try {
+      router.push('/student-login');
+    } catch (error) {
+      console.error('Failed to navigate to student login:', error);
+      toast.error('Failed to access student login');
+    }
+  };
+
+  const handleFacultyLogin = () => {
+    try {
+      router.push('/faculty-login');
+    } catch (error) {
+      console.error('Failed to navigate to faculty login:', error);
+      toast.error('Failed to access faculty login');
+    }
+  };
 
   return (
     <div className="flex h-screen w-screen bg-white min-width-[360px]">
@@ -42,7 +61,7 @@ export default function Home() {
                 <div className="w-full space-y-4">
                   <div className="w-full">
                     <button
-                      onClick={() => router.push('/student-login')}
+                      onClick={handleStudentLogin}
                       className="w-full py-3 px-4 bg-[#800000] text-white rounded-md hover:bg-[#600000] transition-colors flex items-center justify-center gap-3"
                     >
                       <GraduationCap size={24} />
@@ -51,7 +70,7 @@ export default function Home() {
                   </div>
                   <div className="w-full">
                     <button
-                      onClick={() => router.push('/faculty-login')}
+                      onClick={handleFacultyLogin}
                       className="w-full py-3 px-4 bg-[#ffd700] text-white rounded-md hover:bg-[#DAA520] transition-colors flex items-center justify-center gap-3"
                     >
                       <User size={24} />

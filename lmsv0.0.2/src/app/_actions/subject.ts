@@ -30,21 +30,24 @@ export async function createSubject(formData: FormData) {
     return newSubject;
 }
 
-
-
 export async function getSubjects() {
     try {
+        const { userId } = await auth();
+        
+        if (!userId) {
+            return { success: false, error: 'Unauthorized', data: [] };
+        }
+
         const subjects = await prisma.subject.findMany({
             orderBy: { name: 'asc' },
         });
 
-        return subjects;
+        return { success: true, data: subjects || [] };
     } catch (error) {
         console.error('Failed to fetch subjects:', error);
-        throw new Error('Failed to fetch subjects');
+        return { success: false, error: 'Failed to fetch subjects', data: [] };
     }
 }
-
 
 export async function deleteSubject(id: string) {
     const { userId } = await auth();

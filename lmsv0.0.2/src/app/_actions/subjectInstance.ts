@@ -64,7 +64,7 @@ export async function getSubjectInstances() {
     const { userId } = await auth();
     
     if (!userId) {
-      return [];
+      return { success: false, error: 'Unauthorized', data: [] };
     }
 
     const instances = await prisma.subjectInstance.findMany({
@@ -79,18 +79,21 @@ export async function getSubjectInstances() {
       },
     });
 
+    // Ensure we always return an array
+    const validInstances = Array.isArray(instances) ? instances : [];
+    
     // Filter out any instances with null subject data
-    const validInstances = instances.filter(instance => 
+    const filteredInstances = validInstances.filter(instance => 
       instance && 
       instance.subject && 
       instance.subject.name && 
       instance.subject.code
     );
 
-    return validInstances;
+    return { success: true, data: filteredInstances };
   } catch (error) {
     console.error('Failed to fetch subject instances:', error);
-    return [];
+    return { success: false, error: 'Failed to fetch subject instances', data: [] };
   }
 }
 
@@ -168,13 +171,11 @@ export async function getSubjectInstanceDetails(id: string) {
     const { userId } = await auth();
     
     if (!userId) {
-      throw new Error('Unauthorized');
+      return { success: false, error: 'Unauthorized', data: null };
     }
 
     const subjectInstance = await prisma.subjectInstance.findUnique({
-      where: { 
-        id
-      },
+      where: { id },
       include: {
         subject: {
           select: {
@@ -226,64 +227,22 @@ export async function getSubjectInstanceDetails(id: string) {
           orderBy: {
             createdAt: 'desc'
           }
-        },
-        requirements: {
-          where: {
-            subjectInstanceId: id
-          },
-          select: {
-            id: true,
-            requirementNumber: true,
-            title: true,
-            content: true,
-            scoreBase: true,
-            deadline: true,
-            type: true,
-            submissions: {
-              where: {
-                userId: userId
-              },
-              select: {
-                id: true,
-                title: true,
-                content: true,
-                filePath: true,
-                graded: true,
-                score: true,
-                feedback: true,
-                createdAt: true,
-                updatedAt: true
-              }
-            }
-          },
-          orderBy: {
-            requirementNumber: 'asc'
-          }
         }
       }
     });
 
     if (!subjectInstance) {
-      throw new Error('Subject instance not found');
+      return { success: false, error: 'Subject instance not found', data: null };
     }
 
     // Ensure all required fields are present
-    if (!subjectInstance.subject || !subjectInstance.subject.name || !subjectInstance.subject.code) {
-      throw new Error('Invalid subject data');
+    if (!subjectInstance.subject || !subjectInstance.subject.code) {
+      return { success: false, error: 'Invalid subject data', data: null };
     }
 
-    // Add null checks for related entities
-    const sanitizedInstance = {
-      ...subjectInstance,
-      announcements: subjectInstance.announcements || [],
-      moduleFolders: subjectInstance.moduleFolders || [],
-      uploadedContents: subjectInstance.uploadedContents || [],
-      requirements: subjectInstance.requirements || []
-    };
-
-    return sanitizedInstance;
+    return { success: true, data: subjectInstance };
   } catch (error) {
     console.error('Failed to fetch subject instance details:', error);
-    throw error;
+    return { success: false, error: 'Failed to fetch subject instance details', data: null };
   }
 }

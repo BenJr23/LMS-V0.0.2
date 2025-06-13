@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
-import { Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2, Calendar, MessageSquare, HelpCircle, Users } from 'lucide-react';
+import { Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2, Calendar, MessageSquare, HelpCircle, Users, Eye } from 'lucide-react';
 import { getSubjectInstanceDetails } from '@/app/_actions/subjectInstance';
 import { getStudentRequirements } from '@/app/_actions/requirement';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 interface Submission {
   id: string;
@@ -66,6 +67,7 @@ interface SubjectInstance {
 
 export default function SubjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('announcements');
   const [subjectInstance, setSubjectInstance] = useState<SubjectInstance | null>(null);
   const [requirements, setRequirements] = useState<Requirement[]>([]);
@@ -82,28 +84,37 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
     try {
       console.log('Fetching data for subject:', resolvedParams.id);
       
-      const [instanceData, requirementsData] = await Promise.all([
+      const [instanceResult, requirementsResult] = await Promise.all([
         getSubjectInstanceDetails(resolvedParams.id),
         getStudentRequirements(resolvedParams.id)
       ]);
 
-      console.log('Instance Data:', instanceData);
-      console.log('Requirements Data:', requirementsData);
+      console.log('Instance Data:', instanceResult);
+      console.log('Requirements Data:', requirementsResult);
 
-      if (instanceData) {
-        setSubjectInstance(instanceData);
+      if (!instanceResult.success) {
+        toast.error(instanceResult.error || 'Failed to load subject details');
+        setSubjectInstance(null);
+        return;
       }
 
-      if (requirementsData.success && requirementsData.data) {
-        console.log('Setting requirements:', requirementsData.data);
-        setRequirements(requirementsData.data);
+      if (instanceResult.data) {
+        setSubjectInstance(instanceResult.data as SubjectInstance);
       } else {
-        console.log('No requirements data found or error:', requirementsData.error);
+        setSubjectInstance(null);
+      }
+
+      if (requirementsResult.success && requirementsResult.data) {
+        console.log('Setting requirements:', requirementsResult.data);
+        setRequirements(requirementsResult.data);
+      } else {
+        console.log('No requirements data found or error:', requirementsResult.error);
         setRequirements([]);
       }
     } catch (error) {
       console.error('Failed to fetch data:', error);
       toast.error('Failed to load subject details');
+      setSubjectInstance(null);
     } finally {
       setLoading(false);
     }
@@ -265,7 +276,7 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
       {/* Requirements Tab */}
       {activeTab === 'requirements' && (
         <div>
-          {REQUIREMENT_TYPES.map(({ key, label, icon }) => (
+          {REQUIREMENT_TYPES.map(({ key, label }) => (
             <div key={key} className="mb-8">
               <h4 className="text-lg font-bold text-[#800000] uppercase tracking-wide flex items-center gap-2 mb-3">
                 <ClipboardList className="w-5 h-5" />
@@ -277,10 +288,11 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
                     <thead>
                       <tr className="bg-pink-50 border-b border-pink-100">
                         <th className="p-4 text-left font-semibold text-[#800000] w-[15%]">Requirement</th>
-                        <th className="p-4 text-left font-semibold text-[#800000] w-[30%]">Title</th>
+                        <th className="p-4 text-left font-semibold text-[#800000] w-[25%]">Title</th>
                         <th className="p-4 text-left font-semibold text-[#800000] w-[20%]">Due Date</th>
                         <th className="p-4 text-left font-semibold text-[#800000] w-[15%]">Points</th>
-                        <th className="p-4 text-left font-semibold text-[#800000] w-[20%]">Status</th>
+                        <th className="p-4 text-left font-semibold text-[#800000] w-[15%]">Status</th>
+                        <th className="p-4 text-left font-semibold text-[#800000] w-[10%]">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-pink-50">
@@ -336,12 +348,23 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
                                     : 'Not Submitted'}
                                 </span>
                               </td>
+                              <td className="p-4">
+                                <button 
+                                  onClick={() => {
+                                    router.push(`/student/dashboard/${resolvedParams.id}/requirements/${req.id}`);
+                                  }}
+                                  className="px-3 py-1.5 rounded-md bg-[#800000] text-white text-xs font-semibold shadow-sm hover:bg-[#a52a2a] transition-colors duration-200 flex items-center gap-1"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  View
+                                </button>
+                              </td>
                             </tr>
                           );
                         })
                       ) : (
                         <tr>
-                          <td colSpan={5} className="p-4 text-center text-gray-500 italic">
+                          <td colSpan={6} className="p-4 text-center text-gray-500 italic">
                             No {label.toLowerCase()} available yet.
                           </td>
                         </tr>

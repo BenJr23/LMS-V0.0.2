@@ -125,10 +125,7 @@ export async function getEnrolledSubjects() {
   try {
     const { userId } = await auth();
     if (!userId) {
-      return {
-        success: false,
-        error: 'Unauthorized: Please sign in to view enrolled subjects.'
-      };
+      return { success: false, error: 'Unauthorized', data: [] };
     }
 
     const enrolments = await prisma.enrolment.findMany({
@@ -147,17 +144,10 @@ export async function getEnrolledSubjects() {
       }
     });
 
-    return {
-      success: true,
-      data: enrolments
-    };
-
+    return { success: true, data: enrolments };
   } catch (error) {
     console.error('Error in getEnrolledSubjects:', error);
-    return {
-      success: false,
-      error: 'An unexpected error occurred.'
-    };
+    return { success: false, error: 'Failed to fetch enrolled subjects', data: [] };
   }
 }
 
@@ -165,23 +155,17 @@ export async function updateEnrollmentNewContent(enrollmentId: string) {
   try {
     const { userId } = await auth();
     if (!userId) {
-      return { success: false, error: 'Not authenticated' };
+      return { success: false, error: 'Unauthorized' };
     }
 
-    // Update the enrollment to set hasNewContent to false
-    await prisma.enrolment.update({
-      where: {
-        id: enrollmentId,
-        userId // Ensure the enrollment belongs to the current user
-      },
-      data: {
-        hasNewContent: false
-      }
+    const updated = await prisma.enrolment.update({
+      where: { id: enrollmentId },
+      data: { hasNewContent: false }
     });
 
-    return { success: true };
+    return { success: true, data: updated };
   } catch (error) {
-    console.error('Error updating enrollment new content status:', error);
-    return { success: false, error: 'Failed to update enrollment status' };
+    console.error('Error in updateEnrollmentNewContent:', error);
+    return { success: false, error: 'Failed to update enrollment' };
   }
 }

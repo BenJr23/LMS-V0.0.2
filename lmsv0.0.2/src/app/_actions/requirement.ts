@@ -205,4 +205,56 @@ export async function getStudentRequirements(subjectInstanceId: string) {
       data: [] 
     };
   }
+}
+
+export async function getRequirementDetails(requirementId: string) {
+  try {
+    const { userId } = await auth();
+    
+    if (!userId) {
+      return { success: false, error: 'Unauthorized', data: null };
+    }
+
+    const requirement = await prisma.requirement.findUnique({
+      where: { id: requirementId },
+      include: {
+        subjectInstance: {
+          include: {
+            enrolments: {
+              where: { userId }
+            }
+          }
+        }
+      }
+    });
+
+    if (!requirement) {
+      return { success: false, error: 'Requirement not found', data: null };
+    }
+
+    // Check if user is enrolled in the subject
+    const isEnrolled = requirement.subjectInstance.enrolments.length > 0;
+    if (!isEnrolled) {
+      return { success: false, error: 'Not enrolled in this subject', data: null };
+    }
+
+    // Get submission if exists
+    const submission = await prisma.submission.findFirst({
+      where: {
+        requirementId,
+        enrollmentId: requirement.subjectInstance.enrolments[0].id
+      }
+    });
+
+    const requirementWithSubmission = {
+      ...requirement,
+      submission: submission || null,
+      submissionStatus: submission ? (submission.graded ? 'GRADED' : 'SUBMITTED') : 'NOT_SUBMITTED'
+    };
+
+    return { success: true, data: requirementWithSubmission };
+  } catch (error) {
+    console.error('Error in getRequirementDetails:', error);
+    return { success: false, error: 'Failed to fetch requirement details', data: null };
+  }
 } 

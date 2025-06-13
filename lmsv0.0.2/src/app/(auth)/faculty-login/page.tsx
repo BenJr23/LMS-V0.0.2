@@ -8,6 +8,7 @@ import { useSignIn } from '@clerk/nextjs';
 import { useClerk } from '@clerk/nextjs';
 import { isClerkAPIResponseError } from '@clerk/nextjs/errors';
 import { setUserRole } from '@/app/_actions/setUserRole';
+import toast from 'react-hot-toast';
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -45,6 +46,7 @@ export default function Home() {
     setIsLoading(true);
   
     if (!isLoaded || !isEmailValid || !isPasswordValid) {
+      toast.error('Please fill in all fields correctly');
       setIsLoading(false);
       return;
     }
@@ -54,6 +56,7 @@ export default function Home() {
       const result = await signIn.create({ identifier: email, password });
   
       if (result.status !== 'complete') {
+        toast.error('Verification step required');
         setError('Verification step required.');
         setIsLoading(false);
         return;
@@ -73,6 +76,7 @@ export default function Home() {
       if (!data.role || !['admin', 'faculty'].includes(data.role.toLowerCase())) {
         // Sign out the user if role is invalid
         await signOut();
+        toast.error('Invalid role: Only admin and faculty members can access this system');
         setError('Invalid role: Only admin and faculty members can access this system.');
         setIsLoading(false);
         return;
@@ -92,20 +96,27 @@ export default function Home() {
 
       // Step 5: Redirect based on role result
       if (roleResult.redirectUrl) {
+        toast.success('Login successful!');
         router.push(roleResult.redirectUrl);
       } else {
         // Sign out if no redirect URL is provided
         await signOut();
+        toast.error('Unauthorized access');
         router.push('/unauthorized');
       }
   
     } catch (err) {
       if (isClerkAPIResponseError(err)) {
-        setError(err.errors[0]?.message || 'Sign-in failed');
+        const errorMessage = err.errors[0]?.message || 'Sign-in failed';
+        toast.error(errorMessage);
+        setError(errorMessage);
       } else if (err instanceof Error) {
+        toast.error(err.message);
         setError(err.message);
       } else {
-        setError('An unexpected error occurred during login.');
+        const errorMessage = 'An unexpected error occurred during login';
+        toast.error(errorMessage);
+        setError(errorMessage);
       }
       // Sign out on any error
       await signOut();

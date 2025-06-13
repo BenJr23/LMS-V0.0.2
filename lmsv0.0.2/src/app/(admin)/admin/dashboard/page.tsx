@@ -26,14 +26,31 @@ export default function AdminSubjectPage() {
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
-        const data = await getSubjects();
-        setSubjects(data.map(subject => ({
+        const result = await getSubjects();
+        
+        if (!result.success) {
+          if (result.error === 'Unauthorized') {
+            // Let the middleware handle unauthorized access
+            return;
+          }
+          toast.error(result.error || 'Failed to fetch subjects');
+          return;
+        }
+
+        if (!result.data || !Array.isArray(result.data)) {
+          console.error('Invalid data received:', result.data);
+          toast.error('Failed to fetch subjects');
+          return;
+        }
+        
+        setSubjects(result.data.map(subject => ({
           ...subject,
           createdAt: new Date(subject.createdAt),
           updatedAt: new Date(subject.updatedAt)
         })));
       } catch (error) {
-        console.error('Failed to fetch subjects:', error);
+        console.error('Error fetching subjects:', error);
+        toast.error('Failed to fetch subjects');
       }
     };
 

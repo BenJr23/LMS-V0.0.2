@@ -71,8 +71,12 @@ export default function TeachingSectionsPage() {
 
   const fetchSubjectInstances = async () => {
     try {
-      const instancesData = await getSubjectInstances();
-      setSubjectInstances(instancesData || []);
+      const result = await getSubjectInstances();
+      if (!result.success) {
+        toast.error(result.error || 'Failed to load subject instances');
+        return;
+      }
+      setSubjectInstances(result.data as SubjectInstance[]);
     } catch (error) {
       console.error('Failed to fetch subject instances:', error);
       toast.error('Failed to load subject instances');
@@ -82,18 +86,23 @@ export default function TeachingSectionsPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [subjectsData, instancesData] = await Promise.all([
+        const [subjectsResult, instancesResult] = await Promise.all([
           getSubjects(),
           getSubjectInstances()
         ]);
         
-        if (!subjectsData) {
-          toast.error('Failed to load subjects');
+        if (!subjectsResult.success) {
+          toast.error(subjectsResult.error || 'Failed to load subjects');
           return;
         }
         
-        setSubjects(subjectsData);
-        setSubjectInstances(instancesData || []);
+        if (!instancesResult.success) {
+          toast.error(instancesResult.error || 'Failed to load subject instances');
+          return;
+        }
+        
+        setSubjects(subjectsResult.data as Array<{ id: string; name: string; code: string }>);
+        setSubjectInstances(instancesResult.data as SubjectInstance[]);
       } catch (error) {
         console.error('Failed to fetch data:', error);
         toast.error('Failed to load data');
@@ -102,7 +111,7 @@ export default function TeachingSectionsPage() {
     fetchData();
   }, []);
 
-  const filteredInstances = subjectInstances.filter((instance) => {
+  const filteredInstances = (subjectInstances || []).filter((instance) => {
     if (!instance || !instance.subject) return false;
     return (
       instance.subject.name?.toLowerCase().includes(search.toLowerCase()) ||

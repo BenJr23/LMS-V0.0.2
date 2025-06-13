@@ -11,7 +11,8 @@ const isPublicRoute = createRouteMatcher([
   '/student-login',
   '/faculty-login',
   '/api/fetch-roles',
-  '/api/fetch-students' // ✅ make sure student fetch api stays public during login
+  '/api/fetch-students',
+  '/unauthorized' // Add unauthorized page to public routes
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
@@ -19,13 +20,12 @@ export default clerkMiddleware(async (auth, req) => {
   const isAuthenticated = !!userId;
   const currentPath = req.nextUrl.pathname;
 
-  console.log('🔍 Middleware check:', {
-    path: currentPath,
-    isAuthenticated,
-    userId
-  });
+  // Skip middleware for static files and API routes that don't need auth
+  if (req.nextUrl.pathname.match(/\.(ico|png|jpg|jpeg|svg|css|js)$/)) {
+    return NextResponse.next();
+  }
 
-  // Redirect logged-in users away from login pages
+  // Handle login page redirects
   if (isAuthenticated && (currentPath === '/' || currentPath === '/student-login' || currentPath === '/faculty-login')) {
     try {
       const user = await clerkClient.users.getUser(userId);
@@ -42,34 +42,29 @@ export default clerkMiddleware(async (auth, req) => {
           return NextResponse.redirect(new URL('/', req.url));
       }
     } catch (error) {
-      console.error('💥 Error checking user role:', error);
+      // If we can't get user role, just redirect to home
       return NextResponse.redirect(new URL('/', req.url));
     }
   }
 
+  // Handle unauthenticated access
   if (!isPublicRoute(req) && !isAuthenticated) {
-    console.log('⚠️ Unauthenticated access attempt');
     return NextResponse.redirect(new URL('/', req.url));
   }
 
+  // Handle role-based access
   if (isAuthenticated) {
     try {
       const user = await clerkClient.users.getUser(userId);
       const userRole = user?.privateMetadata?.role as string;
 
-      console.log('👤 User role from metadata:', {
-        userId,
-        role: userRole,
-        metadata: user?.privateMetadata
-      });
-
       const isAdminRoute = currentPath.startsWith('/admin/');
       const isFacultyRoute = currentPath.startsWith('/faculty/');
       const isStudentRoute = currentPath.startsWith('/student/');
 
+      // Only check role access for protected routes
       if (isAdminRoute || isFacultyRoute || isStudentRoute) {
         if (!userRole) {
-          console.log('❌ No role found for user');
           return NextResponse.redirect(new URL('/unauthorized', req.url));
         }
 
@@ -80,24 +75,16 @@ export default clerkMiddleware(async (auth, req) => {
         );
 
         if (!hasAccess) {
-          console.log('❌ Role access denied:', {
-            path: currentPath,
-            role: userRole,
-            isAdminRoute,
-            isFacultyRoute,
-            isStudentRoute
-          });
           return NextResponse.redirect(new URL('/unauthorized', req.url));
         }
-
-        console.log('✅ Access granted:', {
-          path: currentPath,
-          role: userRole
-        });
       }
     } catch (error) {
-      console.error('💥 Error checking user role:', error);
-      return NextResponse.redirect(new URL('/unauthorized', req.url));
+      // Only redirect to unauthorized if we're on a protected route
+      if (currentPath.startsWith('/admin/') || 
+          currentPath.startsWith('/faculty/') || 
+          currentPath.startsWith('/student/')) {
+        return NextResponse.redirect(new URL('/unauthorized', req.url));
+      }
     }
   }
 
