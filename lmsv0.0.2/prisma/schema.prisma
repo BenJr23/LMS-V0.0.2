@@ -1,139 +1,148 @@
-generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
-}
-
-datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-}
-
 model Subject {
   id          String            @id @default(cuid())
   name        String
   code        String            @unique
-  createdById String            // Clerk userId
+  createdById String
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
-  instances   SubjectInstance[]  // One-to-many relationship
+  instances   SubjectInstance[]
 }
 
 model SubjectInstance {
-  id             String            @id @default(cuid())
-  teacherName    String
-  grade          String
-  section        String
-  enrollment     Int               // 0 = Inactive, 1 = Active
-  enrolmentCode  Int
-  icon           String
-  subjectId      String
-  createdById    String
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  id               String            @id @default(cuid())
+  subjectId        String
+  teacherName      String
+  grade            String
+  section          String
+  enrollment       Int
+  enrolmentCode    Int
+  icon             String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
-  subject        Subject           @relation(fields: [subjectId], references: [id])
-  requirements   Requirement[]     // ✅ Renamed to keep naming consistency
-  enrolments     Enrolment[]
-  announcements  Announcement[]
-  moduleFolders  ModuleFolder[]
+  subject          Subject           @relation(fields: [subjectId], references: [id])
+  announcements    Announcement[]
+  enrolments       Enrolment[]
+  moduleFolders    ModuleFolder[]
+  requirements     Requirement[]
   uploadedContents UploadedContent[]
 }
 
 model Requirement {
-  id               String       @id @default(cuid())
-  requirementNumber Int
-  title            String?
-  content          String?
-  scoreBase        Int
-  deadline         DateTime
-  type             String
+  id                String          @id @default(cuid())
   subjectInstanceId String
-  createdById      String
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  title             String
+  content           String
+  scoreBase         Int
+  deadline          DateTime
+  type              String
+  requirementNumber Int
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
-  subjectInstance  SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
-  submissions      Submission[]
+  subjectInstance   SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
+  submissions       Submission[]
 }
 
 model Enrolment {
-  id                String    @id @default(cuid())
-  userId            String    // Clerk userId
+  id                String          @id @default(cuid())
   subjectInstanceId String
+  studentId         String
   code              Int
   fullName          String
   email             String
   gradeLevel        String
-  enrollmentStatus  String
   status            String
-  hasNewContent     Boolean   @default(false)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  hasNewContent     Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
   subjectInstance   SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
+  student           Student         @relation(fields: [studentId], references: [id])
   submissions       Submission[]
 
-  @@unique([userId, subjectInstanceId])
+  @@unique([subjectInstanceId, studentId])  // prevent duplicate enrolment per subject instance
 }
 
 model Announcement {
-  id                String    @id @default(cuid())
+  id                String          @id @default(cuid())
   subjectInstanceId String
   userId            String
-
   title             String
   content           String
-
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
   subjectInstance   SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
 }
 
 model ModuleFolder {
-  id                String    @id @default(cuid())
+  id                String          @id @default(cuid())
   subjectInstanceId String
   userId            String
   folderName        String
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
   subjectInstance   SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
   uploadedContents  UploadedContent[]
 }
 
 model UploadedContent {
-  id                String    @id @default(cuid())
+  id                String          @id @default(cuid())
   subjectInstanceId String
   moduleFolderId    String
   fileName          String
   filePath          String
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
-  subjectInstance   SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
   moduleFolder      ModuleFolder    @relation(fields: [moduleFolderId], references: [id])
+  subjectInstance   SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
 }
 
 model Submission {
-  id            String   @id @default(cuid())
+  id            String      @id @default(cuid())
   requirementId String
   enrollmentId  String
   userId        String
-
-  title         String?
-  content       String?
-  filePath      String?
-
-  graded        Boolean  @default(false)
+  title         String
+  content       String
+  filePath      String
+  graded        Boolean     @default(false)
   score         Float?
   feedback      String?
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   requirement   Requirement @relation(fields: [requirementId], references: [id])
-  enrollment    Enrolment    @relation(fields: [enrollmentId], references: [id])
+  enrollment    Enrolment   @relation(fields: [enrollmentId], references: [id])
 }
+
+model Student {
+  id              String    @id @default(cuid())
+  fetchID         Int
+  name            String
+  email           String    @unique
+  role            String    
+  gradeLevel      String
+  status          String    
+  studentNumber   String    
+  dateOfBirth     DateTime
+  gender          String
+  guardianName    String
+  guardianContact String
+  address         String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  enrolments      Enrolment[]
+}
+
+model Faculty {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  role            String 
+}
+
