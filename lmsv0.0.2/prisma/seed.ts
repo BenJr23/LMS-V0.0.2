@@ -1,4 +1,4 @@
-import { PrismaClient } from '../src/generated/prisma';
+import { PrismaClient } from '@/generated/prisma';
 
 const prisma = new PrismaClient();
 
@@ -23,29 +23,28 @@ async function main() {
     { name: 'TLE (Industrial Arts)', code: 'TLE-IA' },
   ];
 
-  for (const subject of subjects) {
-    await prisma.subject.upsert({
-      where: { code: subject.code },
-      update: { 
-        name: subject.name,
-        updatedAt: new Date()
-      },
-      create: {
+  try {
+    console.log('📝 Creating subjects...');
+    const result = await prisma.subject.createMany({
+      data: subjects.map(subject => ({
         name: subject.name,
         code: subject.code,
         createdById: DEFAULT_CREATOR_ID,
         createdAt: new Date(),
         updatedAt: new Date()
-      },
+      }))
     });
-  }
 
-  console.log('✅ Subjects seeded successfully.');
+    console.log(`✅ Successfully created ${result.count} subjects`);
+  } catch (error) {
+    console.error('❌ Error seeding subjects:', error);
+    throw error;
+  }
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error seeding subjects:', e);
+    console.error('❌ Error in main process:', e);
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());

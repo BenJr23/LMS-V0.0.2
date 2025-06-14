@@ -63,7 +63,11 @@ export default function Home() {
         return;
       }
 
-      // Step 2: Fetch the student's data from our API
+      // Step 2: Create and activate the session
+      const session = await setActive({ session: result.createdSessionId });
+      console.log('Session created and activated:', session);
+
+      // Step 3: Fetch the student's data from our API
       const res = await fetch(`/api/fetch-students?email=${encodeURIComponent(email)}`);
       
       if (!res.ok) {
@@ -75,24 +79,21 @@ export default function Home() {
       
       // Check if student data is valid
       if (!studentData || !studentData.role || studentData.role.toLowerCase() !== 'student') {
-        // Sign out the user if role is invalid
-        await signOut();
         toast.error('Invalid role: Only students can access this system');
         setError('Invalid role: Only students can access this system.');
         setIsLoading(false);
         return;
       }
 
-      // Step 3: Activate the session
-      await setActive({ session: result.createdSessionId });
-
       // Step 4: Set student role using server action
       const roleResult = await setStudentRole(studentData);
       
       if (!roleResult.success) {
-        // Sign out if role setting fails
-        await signOut();
-        throw new Error(roleResult.error || 'Failed to set student role');
+        console.error('Failed to set student role:', roleResult.error);
+        toast.error(roleResult.error || 'Failed to set student role');
+        setError(roleResult.error || 'Failed to set student role');
+        setIsLoading(false);
+        return;
       }
 
       // Step 5: Redirect based on role result
@@ -100,13 +101,12 @@ export default function Home() {
         toast.success('Login successful!');
         router.push(roleResult.redirectUrl);
       } else {
-        // Sign out if no redirect URL is provided
-        await signOut();
         toast.error('Unauthorized access');
         router.push('/unauthorized');
       }
 
     } catch (err) {
+      console.error('Login error:', err);
       if (isClerkAPIResponseError(err)) {
         const errorMessage = err.errors[0]?.message || 'Sign-in failed';
         toast.error(errorMessage);
@@ -119,8 +119,6 @@ export default function Home() {
         toast.error(errorMessage);
         setError(errorMessage);
       }
-      // Sign out on any error
-      await signOut();
     } finally {
       setIsLoading(false);
     }
@@ -145,7 +143,7 @@ export default function Home() {
             <p className="text-gray-600 text-sm">Sign in to access your account</p>
           </div>
 
-          <form className="space-y-4" onSubmit={handleLogin}>
+          <form onSubmit={handleLogin} className="space-y-4">
             {/* Email */}
             <div>
               <div className="relative">

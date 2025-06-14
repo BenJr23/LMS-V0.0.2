@@ -143,7 +143,7 @@ export async function getStudentRequirements(subjectInstanceId: string) {
       where: {
         userId,
         subjectInstanceId,
-        enrollmentStatus: 'enrolled'
+        status: 'active'
       }
     });
 

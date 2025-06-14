@@ -9,14 +9,20 @@ export type SetResult = {
     redirectUrl?: string;
 };
 
-// The student data now matches your API response
+// Updated student data structure to match API response
 export async function setStudentRole(studentData: {
-    full_name: string;
+    id: number;
+    name: string;
     email: string;
     role: string;
-    grade_level: string;
-    enrollment_status: string;
+    gradeLevel: string;
     status: string;
+    studentNumber: string;
+    dateOfBirth: string;
+    gender: string;
+    guardianName: string;
+    guardianContact: string;
+    address: string;
 }): Promise<SetResult> {
     try {
         if (!process.env.CLERK_SECRET_KEY) {
@@ -25,12 +31,14 @@ export async function setStudentRole(studentData: {
         }
 
         const user = await currentUser();
-        const userId = user?.id;
-
-        if (!userId) {
-            console.warn('❌ Unauthorized: No user ID found');
+        
+        if (!user) {
+            console.warn('❌ Unauthorized: No user found');
             return { success: false, error: 'Unauthorized: User not authenticated' };
         }
+
+        const userId = user.id;
+        console.log('🔑 User authenticated:', { userId });
 
         try {
             const client = await clerkClient();
@@ -46,14 +54,20 @@ export async function setStudentRole(studentData: {
             // Update both private and public metadata with exact field names
             await client.users.updateUser(userId, {
                 privateMetadata: {
-                    role: 'student' // Keep role private for security
+                    role: 'student', // Keep role private for security
+                    studentId: studentData.id,
+                    studentNumber: studentData.studentNumber
                 },
                 publicMetadata: {
-                    full_name: studentData.full_name,
+                    name: studentData.name,
                     email: studentData.email,
-                    grade_level: studentData.grade_level,
-                    enrollment_status: studentData.enrollment_status,
-                    status: studentData.status 
+                    gradeLevel: studentData.gradeLevel,
+                    status: studentData.status,
+                    dateOfBirth: studentData.dateOfBirth,
+                    gender: studentData.gender,
+                    guardianName: studentData.guardianName,
+                    guardianContact: studentData.guardianContact,
+                    address: studentData.address
                 }
             });
 

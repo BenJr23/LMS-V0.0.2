@@ -50,13 +50,13 @@ export async function GET(req: NextRequest) {
   try {
     console.log('🌐 Fetch Students API: Making request to external API');
     console.log('Request details:', {
-      url: 'https://sjsfi-auth-2a04ezduh-dnsxmrs-projects.vercel.app/api/xr/getStudent',
+      url: 'hhttps://sjsfi-sis.vercel.app/api/xr/getStudent',
       method: 'POST',
       timestamp,
       email
     });
     
-    const response = await fetch('https://sjsfi-auth-2a04ezduh-dnsxmrs-projects.vercel.app/api/xr/getStudent', {
+    const response = await fetch('https://sjsfi-sis.vercel.app/api/xr/getStudent', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.SJSFI_LMS_API_KEY}`,
@@ -88,22 +88,34 @@ export async function GET(req: NextRequest) {
     // Log specific fields if they exist
     if (data) {
       console.log('📋 Fetch Students API: Student details', {
-        name: `${data.first_name} ${data.last_name}`,
+        id: data.id,
+        name: data.name,
         email: data.email,
         role: data.role,
-        grade_level: data.grade_level,
-        enrollment_status: data.enrollment_status,
-        status: data.status
+        gradeLevel: data.gradeLevel,
+        status: data.status,
+        studentNumber: data.studentNumber,
+        dateOfBirth: data.dateOfBirth,
+        gender: data.gender,
+        guardianName: data.guardianName,
+        guardianContact: data.guardianContact,
+        address: data.address
       });
     }
     
     return NextResponse.json({
-      full_name: `${data.first_name} ${data.last_name}`,
+      id: data.id,
+      name: data.name,
       email: data.email,
       role: data.role,
-      grade_level: data.grade_level,
-      enrollment_status: data.enrollment_status,
-      status: data.status
+      gradeLevel: data.gradeLevel,
+      status: data.status,
+      studentNumber: data.studentNumber,
+      dateOfBirth: data.dateOfBirth,
+      gender: data.gender,
+      guardianName: data.guardianName,
+      guardianContact: data.guardianContact,
+      address: data.address
     }, { status: 200 });
     
 

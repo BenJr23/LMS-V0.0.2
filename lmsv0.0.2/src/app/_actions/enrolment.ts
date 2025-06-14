@@ -12,9 +12,8 @@ export interface EnrolmentData {
   fullName: string;
   email: string;
   gradeLevel: string;
-  enrollmentStatus: string;
   status: string;
-  hasNewContent?: boolean;  // Added to match schema
+  hasNewContent?: boolean;
 }
 
 interface EnrolmentResponse {
@@ -74,14 +73,7 @@ export async function createEnrolment(subjectInstanceId: string, code: number): 
 
     console.log('User metadata:', metadata); // Debug log
 
-    // Validate enrollment status and status
-    if (metadata.enrollment_status !== 'enrolled') {
-      return {
-        success: false,
-        error: 'Your enrollment status is not active. Please contact the administrator.'
-      };
-    }
-
+    // Validate status
     if (metadata.status !== 'active') {
       return {
         success: false,
@@ -98,7 +90,6 @@ export async function createEnrolment(subjectInstanceId: string, code: number): 
         fullName: metadata.full_name as string,
         email: metadata.email as string,
         gradeLevel: metadata.grade_level as string,
-        enrollmentStatus: metadata.enrollment_status as string,
         status: metadata.status as string
       }
     });

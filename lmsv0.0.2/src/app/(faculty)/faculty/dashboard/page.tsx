@@ -304,7 +304,7 @@ export default function TeachingSectionsPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Enrollment Status</label>
+                <label className="block text-sm font-medium text-gray-700">Status</label>
                 <select
                   value={form.enrollment}
                   onChange={(e) => setForm({ ...form, enrollment: parseInt(e.target.value) })}
